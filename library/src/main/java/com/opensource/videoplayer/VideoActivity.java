@@ -31,8 +31,6 @@ import android.view.WindowManager;
  * This activity plays a video from a specified URI.
  */
 public class VideoActivity extends Activity {
-    @SuppressWarnings("unused")
-    private static final String TAG = "MovieView";
 
     private VideoPlayer mVideoPlayer;
     private boolean mFinishOnCompletion;
@@ -43,14 +41,20 @@ public class VideoActivity extends Activity {
         setContentView(R.layout.activity_video_player);
         View rootView = findViewById(R.id.view_video_player_root);
         Intent intent = getIntent();
-        mVideoPlayer = new VideoPlayer(rootView, this, intent.getData()) {
+        mVideoPlayer = new VideoPlayer(rootView, this, intent.getData());
+        mVideoPlayer.setPlayListener(new PlayListener() {
             @Override
             public void onCompletion() {
                 if (mFinishOnCompletion) {
                     finish();
                 }
             }
-        };
+
+            @Override
+            public void onError(int what, int extra) {
+
+            }
+        });
 
         if (intent.hasExtra(MediaStore.EXTRA_SCREEN_ORIENTATION)) {
             int orientation = intent.getIntExtra(MediaStore.EXTRA_SCREEN_ORIENTATION, ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);

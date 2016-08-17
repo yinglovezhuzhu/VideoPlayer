@@ -39,9 +39,6 @@ import android.widget.VideoView;
 
 public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener {
 
-    @SuppressWarnings("unused")
-    private static final String TAG = "MovieViewControl";
-
     private static final int HALF_MINUTE = 30 * 1000;
     private static final int TWO_MINUTES = 4 * HALF_MINUTE;
 
@@ -50,9 +47,11 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
     private final Uri mUri;
     private final ContentResolver mContentResolver;
 
-    Handler mHandler = new Handler();
+    private PlayListener mPlayListener = null;
 
-    Runnable mPlayingChecker = new Runnable() {
+    private final Handler mHandler = new Handler();
+
+    private final Runnable mPlayingChecker = new Runnable() {
         public void run() {
             if (mVideoView.isPlaying()) {
                 mProgressView.setVisibility(View.GONE);
@@ -61,20 +60,6 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
             }
         }
     };
-
-    public static String formatDuration(final Context context, int durationMs) {
-        int duration = durationMs / 1000;
-        int h = duration / 3600;
-        int m = (duration - h * 3600) / 60;
-        int s = duration - (h * 3600 + m * 60);
-        String durationValue;
-        if (h == 0) {
-            durationValue = String.format(context.getString(R.string.details_ms), m, s);
-        } else {
-            durationValue = String.format(context.getString(R.string.details_hms), h, m, s);
-        }
-        return durationValue;
-    }
 
     public VideoPlayer(View rootView, Context context, Uri videoUri) {
         mContentResolver = context.getContentResolver();
@@ -104,12 +89,14 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
         if (bookmark != null) {
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             builder.setTitle(R.string.resume_playing_title);
-            builder
-                    .setMessage(String
-                            .format(context.getString(R.string.resume_playing_message), formatDuration(context, bookmark)));
+            builder.setMessage(String
+                            .format(context.getString(R.string.resume_playing_message),
+                                    formatDuration(context, bookmark)));
             builder.setOnCancelListener(new OnCancelListener() {
                 public void onCancel(DialogInterface dialog) {
-                    onCompletion();
+                    if(null != mPlayListener) {
+                        mPlayListener.onCompletion();
+                    }
                 }
             });
             builder.setPositiveButton(R.string.resume_playing_resume, new OnClickListener() {
@@ -126,6 +113,51 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
             builder.show();
         } else {
             mVideoView.start();
+        }
+    }
+
+    @Override
+    public boolean onError(MediaPlayer mp, int what, int extra) {
+        mHandler.removeCallbacksAndMessages(null);
+        mProgressView.setVisibility(View.GONE);
+        if(null != mPlayingChecker) {
+            mPlayListener.onError(what, extra);
+        }
+        return false;
+    }
+
+    @Override
+    public void onCompletion(MediaPlayer mp) {
+        if(null != mPlayListener) {
+            mPlayListener.onCompletion();
+        }
+    }
+
+    /**
+     * 设置播放监听
+     * @param listener
+     */
+    public void setPlayListener(PlayListener listener) {
+        this.mPlayListener = listener;
+    }
+
+    public void onPause() {
+        mHandler.removeCallbacksAndMessages(null);
+        if(null != mVideoView) {
+            setBookmark(mVideoView.getCurrentPosition(), mVideoView.getDuration());
+            mVideoView.suspend();
+        }
+    }
+
+    public void onResume() {
+        if(null != mVideoView) {
+            mVideoView.resume();
+        }
+    }
+
+    public void onDestroy() {
+        if(null != mVideoView) {
+            mVideoView.stopPlayback();
         }
     }
 
@@ -198,31 +230,18 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
         }
     }
 
-    public void onPause() {
-        mHandler.removeCallbacksAndMessages(null);
-        setBookmark(mVideoView.getCurrentPosition(), mVideoView.getDuration());
-
-        mVideoView.suspend();
+    private String formatDuration(final Context context, int durationMs) {
+        int duration = durationMs / 1000;
+        int h = duration / 3600;
+        int m = (duration - h * 3600) / 60;
+        int s = duration - (h * 3600 + m * 60);
+        String durationValue;
+        if (h == 0) {
+            durationValue = String.format(context.getString(R.string.details_ms), m, s);
+        } else {
+            durationValue = String.format(context.getString(R.string.details_hms), h, m, s);
+        }
+        return durationValue;
     }
 
-    public void onResume() {
-        mVideoView.resume();
-    }
-
-    public void onDestroy() {
-        mVideoView.stopPlayback();
-    }
-
-    public boolean onError(MediaPlayer player, int arg1, int arg2) {
-        mHandler.removeCallbacksAndMessages(null);
-        mProgressView.setVisibility(View.GONE);
-        return false;
-    }
-
-    public void onCompletion(MediaPlayer mp) {
-        onCompletion();
-    }
-
-    public void onCompletion() {
-    }
 }
