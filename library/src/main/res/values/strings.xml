@@ -17,8 +17,6 @@
   -->
 
 <resources>
-    <string name="app_name">MoviePlayer_Library</string>
-
     <!-- shown in the video player view while the video is being loaded, before it starts playing -->
     <string name="loading_video">Loading video\u2026</string>
 

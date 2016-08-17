@@ -18,8 +18,5 @@
   -->
 
 <resources>
-
-    <string name="app_name">MoviePlayer_Test</string>
-    <string name="hello_world">Hello world!</string>
-
+    <string name="app_name">VideoPlayer</string>
 </resources>
