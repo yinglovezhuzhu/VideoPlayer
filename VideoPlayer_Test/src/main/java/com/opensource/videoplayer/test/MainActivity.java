@@ -37,8 +37,8 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 Intent i = new Intent(MainActivity.this, VideoActivity.class);
-                i.setData(Uri.parse("http://192.168.1.121/family_guy_penis_car.3gp"));
-//                i.setData(Uri.parse("/storage/extSdCard/DCIM/Camera/VID_20140502_085802.mp4"));
+                i.setData(Uri.parse("http://172.16.10.84/test.mp4"));
+//                i.setData(Uri.parse("/storage/emulated/0/DCIM/Camera/VID_20160816_165126.mp4"));
 //                i.setData(Uri.parse("/mnt/sdcard/DCIM/Camera/VID_19700110_122102.3gp"));
                 startActivity(i);
             }
