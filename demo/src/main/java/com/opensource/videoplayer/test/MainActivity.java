@@ -33,13 +33,20 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        findViewById(R.id.btn).setOnClickListener(new View.OnClickListener() {
+        findViewById(R.id.btn_local).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent i = new Intent(MainActivity.this, VideoActivity.class);
+                i.setData(Uri.parse("/storage/emulated/0/DCIM/Camera/VID_20160816_165126.mp4"));
+                startActivity(i);
+            }
+        });
+
+        findViewById(R.id.btn_network).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent i = new Intent(MainActivity.this, VideoActivity.class);
                 i.setData(Uri.parse("http://172.16.10.84/test.mp4"));
-//                i.setData(Uri.parse("/storage/emulated/0/DCIM/Camera/VID_20160816_165126.mp4"));
-//                i.setData(Uri.parse("/mnt/sdcard/DCIM/Camera/VID_19700110_122102.3gp"));
                 startActivity(i);
             }
         });

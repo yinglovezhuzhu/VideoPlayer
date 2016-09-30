@@ -16,16 +16,20 @@
   ~  limitations under the License.
   -->
 
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    tools:context="${packageName}.${activityClass}">
+    android:layout_height="match_parent">
 
     <Button
-        android:id="@+id/btn"
+        android:id="@+id/btn_local"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Play"/>
+        android:text="Play Local"/>
+    <Button
+        android:id="@+id/btn_network"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Play Network"/>
 
-</RelativeLayout>
+</LinearLayout>
