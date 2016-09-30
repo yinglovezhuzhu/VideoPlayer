@@ -71,7 +71,8 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
         // For streams that we expect to be slow to start up, show a
         // progress spinner until playback starts.
         String scheme = mUri.getScheme();
-        if ("http".equalsIgnoreCase(scheme) || "rtsp".equalsIgnoreCase(scheme)) {
+        if (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")
+                || scheme.equalsIgnoreCase("ftp") || "rtsp".equalsIgnoreCase(scheme)) {
             mHandler.postDelayed(mPlayingChecker, 250);
         } else {
             mProgressView.setVisibility(View.GONE);
