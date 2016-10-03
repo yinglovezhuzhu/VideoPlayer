@@ -71,8 +71,8 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
         // For streams that we expect to be slow to start up, show a
         // progress spinner until playback starts.
         String scheme = mUri.getScheme();
-        if (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")
-                || scheme.equalsIgnoreCase("ftp") || "rtsp".equalsIgnoreCase(scheme)) {
+        if (null != scheme && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")
+                || scheme.equalsIgnoreCase("ftp") || "rtsp".equalsIgnoreCase(scheme))) {
             mHandler.postDelayed(mPlayingChecker, 250);
         } else {
             mProgressView.setVisibility(View.GONE);
@@ -86,35 +86,36 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
         // make the video view handle keys for seeking and pausing
         mVideoView.requestFocus();
 
-        final Integer bookmark = getBookmark();
-        if (bookmark != null) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(context);
-            builder.setTitle(R.string.resume_playing_title);
-            builder.setMessage(String
-                            .format(context.getString(R.string.resume_playing_message),
-                                    formatDuration(context, bookmark)));
-            builder.setOnCancelListener(new OnCancelListener() {
-                public void onCancel(DialogInterface dialog) {
-                    if(null != mPlayListener) {
-                        mPlayListener.onCompletion();
-                    }
-                }
-            });
-            builder.setPositiveButton(R.string.resume_playing_resume, new OnClickListener() {
-                public void onClick(DialogInterface dialog, int which) {
-                    mVideoView.seekTo(bookmark);
-                    mVideoView.start();
-                }
-            });
-            builder.setNegativeButton(R.string.resume_playing_restart, new OnClickListener() {
-                public void onClick(DialogInterface dialog, int which) {
-                    mVideoView.start();
-                }
-            });
-            builder.show();
-        } else {
-            mVideoView.start();
-        }
+//        final Integer bookmark = getBookmark();
+//        if (bookmark != null) {
+//            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+//            builder.setTitle(R.string.resume_playing_title);
+//            builder.setMessage(String
+//                            .format(context.getString(R.string.resume_playing_message),
+//                                    formatDuration(context, bookmark)));
+//            builder.setOnCancelListener(new OnCancelListener() {
+//                public void onCancel(DialogInterface dialog) {
+//                    if(null != mPlayListener) {
+//                        mPlayListener.onCompletion();
+//                    }
+//                }
+//            });
+//            builder.setPositiveButton(R.string.resume_playing_resume, new OnClickListener() {
+//                public void onClick(DialogInterface dialog, int which) {
+//                    mVideoView.seekTo(bookmark);
+//                    mVideoView.start();
+//                }
+//            });
+//            builder.setNegativeButton(R.string.resume_playing_restart, new OnClickListener() {
+//                public void onClick(DialogInterface dialog, int which) {
+//                    mVideoView.start();
+//                }
+//            });
+//            builder.show();
+//        } else {
+//            mVideoView.start();
+//        }
+        mVideoView.start();
     }
 
     @Override
@@ -145,7 +146,7 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
     public void onPause() {
         mHandler.removeCallbacksAndMessages(null);
         if(null != mVideoView) {
-            setBookmark(mVideoView.getCurrentPosition(), mVideoView.getDuration());
+//            setBookmark(mVideoView.getCurrentPosition(), mVideoView.getDuration());
             mVideoView.suspend();
         }
     }
@@ -162,42 +163,42 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
         }
     }
 
-    private static boolean uriSupportsBookmarks(Uri uri) {
-        String scheme = uri.getScheme();
-        String authority = uri.getAuthority();
-        return ("content".equalsIgnoreCase(scheme) && MediaStore.AUTHORITY.equalsIgnoreCase(authority));
-    }
+//    private static boolean uriSupportsBookmarks(Uri uri) {
+//        String scheme = uri.getScheme();
+//        String authority = uri.getAuthority();
+//        return ("content".equalsIgnoreCase(scheme) && MediaStore.AUTHORITY.equalsIgnoreCase(authority));
+//    }
 
-    private Integer getBookmark() {
-        if (!uriSupportsBookmarks(mUri)) {
-            return null;
-        }
-
-        String[] projection = new String[] { Video.VideoColumns.DURATION, Video.VideoColumns.BOOKMARK };
-
-        try {
-            Cursor cursor = mContentResolver.query(mUri, projection, null, null, null);
-            if (cursor != null) {
-                try {
-                    if (cursor.moveToFirst()) {
-                        int duration = getCursorInteger(cursor, 0);
-                        int bookmark = getCursorInteger(cursor, 1);
-                        if ((bookmark < HALF_MINUTE) || (duration < TWO_MINUTES)
-                                || (bookmark > (duration - HALF_MINUTE))) {
-                            return null;
-                        }
-                        return Integer.valueOf(bookmark);
-                    }
-                } finally {
-                    cursor.close();
-                }
-            }
-        } catch (SQLiteException e) {
-            // ignore
-        }
-
-        return null;
-    }
+//    private Integer getBookmark() {
+//        if (!uriSupportsBookmarks(mUri)) {
+//            return null;
+//        }
+//
+//        String[] projection = new String[] { Video.VideoColumns.DURATION, Video.VideoColumns.BOOKMARK };
+//
+//        try {
+//            Cursor cursor = mContentResolver.query(mUri, projection, null, null, null);
+//            if (cursor != null) {
+//                try {
+//                    if (cursor.moveToFirst()) {
+//                        int duration = getCursorInteger(cursor, 0);
+//                        int bookmark = getCursorInteger(cursor, 1);
+//                        if ((bookmark < HALF_MINUTE) || (duration < TWO_MINUTES)
+//                                || (bookmark > (duration - HALF_MINUTE))) {
+//                            return null;
+//                        }
+//                        return Integer.valueOf(bookmark);
+//                    }
+//                } finally {
+//                    cursor.close();
+//                }
+//            }
+//        } catch (SQLiteException e) {
+//            // ignore
+//        }
+//
+//        return null;
+//    }
 
     private static int getCursorInteger(Cursor cursor, int index) {
         try {
@@ -210,26 +211,26 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
 
     }
 
-    private void setBookmark(int bookmark, int duration) {
-        if (!uriSupportsBookmarks(mUri)) {
-            return;
-        }
-
-        ContentValues values = new ContentValues();
-        values.put(Video.VideoColumns.BOOKMARK, Integer.toString(bookmark));
-        values.put(Video.VideoColumns.DURATION, Integer.toString(duration));
-        try {
-            mContentResolver.update(mUri, values, null, null);
-        } catch (SecurityException ex) {
-            // Ignore, can happen if we try to set the bookmark on a read-only
-            // resource such as a video attached to GMail.
-        } catch (SQLiteException e) {
-            // ignore. can happen if the content doesn't support a bookmark
-            // column.
-        } catch (UnsupportedOperationException e) {
-            // ignore. can happen if the external volume is already detached.
-        }
-    }
+//    private void setBookmark(int bookmark, int duration) {
+//        if (!uriSupportsBookmarks(mUri)) {
+//            return;
+//        }
+//
+//        ContentValues values = new ContentValues();
+//        values.put(Video.VideoColumns.BOOKMARK, Integer.toString(bookmark));
+//        values.put(Video.VideoColumns.DURATION, Integer.toString(duration));
+//        try {
+//            mContentResolver.update(mUri, values, null, null);
+//        } catch (SecurityException ex) {
+//            // Ignore, can happen if we try to set the bookmark on a read-only
+//            // resource such as a video attached to GMail.
+//        } catch (SQLiteException e) {
+//            // ignore. can happen if the content doesn't support a bookmark
+//            // column.
+//        } catch (UnsupportedOperationException e) {
+//            // ignore. can happen if the external volume is already detached.
+//        }
+//    }
 
     private String formatDuration(final Context context, int durationMs) {
         int duration = durationMs / 1000;

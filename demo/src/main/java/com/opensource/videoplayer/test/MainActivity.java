@@ -22,8 +22,11 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 
+import com.opensource.videoplayer.DownloadListener;
+import com.opensource.videoplayer.Downloader;
 import com.opensource.videoplayer.VideoActivity;
 
 public class MainActivity extends Activity {
@@ -32,23 +35,47 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        final Downloader d = new Downloader(MainActivity.this,
+                "http://www.gzevergrandefc.com/UploadFile/photos/2013-06/fbb77294-6041-41ac-befa-37e237bd41f2.jpg",
+                getExternalCacheDir(), null);
 
         findViewById(R.id.btn_local).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent i = new Intent(MainActivity.this, VideoActivity.class);
-                i.setData(Uri.parse("/storage/emulated/0/DCIM/Camera/VID_20160816_165126.mp4"));
-                startActivity(i);
+//                Intent i = new Intent(MainActivity.this, VideoActivity.class);
+////                i.setData(Uri.parse("/storage/emulated/0/DCIM/Camera/VID_20160816_165126.mp4"));
+//                i.setData(Uri.parse("/storage/sdcard1/DCIM/Camera/Video/VID_20160501_080038.mp4"));
+//                startActivity(i);
+                d.stop();
             }
         });
+
 
         findViewById(R.id.btn_network).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent i = new Intent(MainActivity.this, VideoActivity.class);
-                i.setData(Uri.parse("http://172.16.10.84/test.mp4"));
-                startActivity(i);
+//                Intent i = new Intent(MainActivity.this, VideoActivity.class);
+//                i.setData(Uri.parse("http://172.16.10.84/test.mp4"));
+//                startActivity(i);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        try {
+                            d.download(new DownloadListener() {
+                                @Override
+                                public void onProgressUpdate(int downloadedSize, int totalSize) {
+                                    Log.e("AAAAAAAAAAAAAAAAAAAAA", downloadedSize + "<>" + totalSize);
+                                }
+                            });
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
             }
         });
+
+
     }
 }
