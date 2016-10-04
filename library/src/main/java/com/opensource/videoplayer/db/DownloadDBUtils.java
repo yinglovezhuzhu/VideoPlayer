@@ -34,13 +34,15 @@ import com.opensource.videoplayer.utils.StringUtils;
  */
 public class DownloadDBUtils {
 	
-	private static final String TABLE_NAME = "download_log";
+	private static final String TABLE_NAME_LOG = "download_log";
+    private static final String TABLE_NAME_HISTORY = "download_history";
 
 	private static final String _ID = "_id";
     private static final String URL = "url";
     private static final String DOWNLOADED_SIZE = "downloaded_size";
 	private static final String TOTAL_SIZE = "total_size";
     private static final String SAVED_FILE = "saved_file";
+    private static final String FINISHED_TIME = "finished_time";
 	
 	/**
 	 * Save the log of a file.
@@ -48,7 +50,7 @@ public class DownloadDBUtils {
 	 * @param log
 	 * @return 插入数据id
 	 */
-	public static long save(Context context, DownloadLog log) {
+	public static long saveLog(Context context, DownloadLog log) {
         if(null == log || StringUtils.isEmpty(log.getUrl())) {
             return -1L;
         }
@@ -61,7 +63,7 @@ public class DownloadDBUtils {
             values.put(DOWNLOADED_SIZE, log.getDownloadedSize());
             values.put(TOTAL_SIZE, log.getTotalSize());
             values.put(SAVED_FILE, log.getSavedFile());
-            id = db.insert(TABLE_NAME, "", values);
+            id = db.insert(TABLE_NAME_LOG, "", values);
 			// 设置事务执行的标志为成功
 			db.setTransactionSuccessful();
 		} catch(IllegalStateException e) {
@@ -79,12 +81,12 @@ public class DownloadDBUtils {
 	 * @param url 下载URL
 	 * @return 删除记录数
 	 */
-	public static int delete(Context context, String url) {
+	public static int deleteLog(Context context, String url) {
 		SQLiteDatabase db = DownloadDBHelper.getWriteableDatabase(context);
 		int count = 0;
 		try {
 			db.beginTransaction();
-			count = db.delete(TABLE_NAME, URL + " = ?", new String[] {url, });
+			count = db.delete(TABLE_NAME_LOG, URL + " = ?", new String[] {url, });
 			db.setTransactionSuccessful();
 		} finally {
 			db.endTransaction();
@@ -94,14 +96,14 @@ public class DownloadDBUtils {
 	}
 	
 	/**
-	 * Get the log by url.
+	 * 根据URL地址返回下载日志，如果没有返回null
 	 * @param context Context
 	 * @param url 下载地址
-	 * @return 下载日志信息
+	 * @return 下载日志信息，没有返回null
 	 */
 	public static DownloadLog getLogByUrl(Context context, String url) {
 		SQLiteDatabase db = DownloadDBHelper.getReadableDatabase(context);
-		Cursor cursor = db.query(TABLE_NAME, null, URL + " = ?",
+		Cursor cursor = db.query(TABLE_NAME_LOG, null, URL + " = ?",
                 new String[] {url, }, null, null, null);
         DownloadLog downloadLog = null;
 		if(cursor != null) {
@@ -129,7 +131,7 @@ public class DownloadDBUtils {
 	 * @param context Context对象
 	 * @param log 下载日志数据
 	 */
-	public static int update(Context context, DownloadLog log) {
+	public static int updateLog(Context context, DownloadLog log) {
 		SQLiteDatabase db = DownloadDBHelper.getWriteableDatabase(context);
 		int count = 0;
 		try {
@@ -138,8 +140,8 @@ public class DownloadDBUtils {
             values.put(URL, log.getUrl());
 			values.put(DOWNLOADED_SIZE, log.getDownloadedSize());
             values.put(TOTAL_SIZE, log.getTotalSize());
-            values.put(SAVED_FILE, log.getTotalSize());
-			count = db.update(TABLE_NAME, values, URL + " = ?", new String[] {log.getUrl(), });
+            values.put(SAVED_FILE, log.getSavedFile());
+			count = db.update(TABLE_NAME_LOG, values, URL + " = ?", new String[] {log.getUrl(), });
 			db.setTransactionSuccessful();
 		} finally {
 			db.endTransaction();
@@ -147,5 +149,90 @@ public class DownloadDBUtils {
 		}
 		return count;
 	}
-	
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Save the log of a file.
+     * @param context Context对象
+     * @param log
+     * @return 插入数据id
+     */
+    public static long saveHistory(Context context, DownloadLog log) {
+        if(null == log || StringUtils.isEmpty(log.getUrl())) {
+            return -1L;
+        }
+        SQLiteDatabase db = DownloadDBHelper.getWriteableDatabase(context);
+        long id = -1;
+        db.beginTransaction();
+        try {
+            ContentValues values = new ContentValues();
+            values.put(URL, log.getUrl());
+            values.put(TOTAL_SIZE, log.getTotalSize());
+            values.put(FINISHED_TIME, log.getFinishedTime());
+            values.put(SAVED_FILE, log.getSavedFile());
+            id = db.insert(TABLE_NAME_HISTORY, "", values);
+            // 设置事务执行的标志为成功
+            db.setTransactionSuccessful();
+        } catch(IllegalStateException e) {
+            e.printStackTrace();
+        } finally {
+            db.endTransaction();
+            db.close();
+        }
+        return id;
+    }
+
+    /**
+     * 根据URL返回历史记录信息，如果没有返回null
+     * @param context Context
+     * @param url 下载地址
+     * @return 下载历史记录，没有返回null
+     */
+    public static DownloadLog getHistoryByUrl(Context context, String url) {
+        SQLiteDatabase db = DownloadDBHelper.getReadableDatabase(context);
+        Cursor cursor = db.query(TABLE_NAME_HISTORY, null, URL + " = ?",
+                new String[] {url, }, null, null, null);
+        DownloadLog history = null;
+        if(cursor != null) {
+            if(cursor.moveToFirst()) {
+                history = new DownloadLog();
+                int idIndex = cursor.getColumnIndex(_ID);
+                int urlIndex = cursor.getColumnIndex(URL);
+                int totalSizeIndex = cursor.getColumnIndexOrThrow(TOTAL_SIZE);
+                int finishedTimeIndex = cursor.getColumnIndex(FINISHED_TIME);
+                int savedFileIndex = cursor.getColumnIndex(SAVED_FILE);
+                history.setId(cursor.getLong(idIndex));
+                history.setUrl(cursor.getString(urlIndex));
+                history.setTotalSize(cursor.getInt(totalSizeIndex));
+                history.setDownloadedSize(history.getTotalSize());
+                history.setFinishedTime(cursor.getLong(finishedTimeIndex));
+                history.setSavedFile(cursor.getString(savedFileIndex));
+            }
+            cursor.close();
+        }
+        db.close();
+        return history;
+    }
+
+    /**
+     * 根据URL删除历史记录
+     * @param context Context
+     * @param url 下载URL
+     * @return 删除记录数
+     */
+    public static int deleteHistory(Context context, String url) {
+        SQLiteDatabase db = DownloadDBHelper.getWriteableDatabase(context);
+        int count = 0;
+        try {
+            db.beginTransaction();
+            count = db.delete(TABLE_NAME_HISTORY, URL + " = ?", new String[] {url, });
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
+            db.close();
+        }
+        return count;
+    }
 }

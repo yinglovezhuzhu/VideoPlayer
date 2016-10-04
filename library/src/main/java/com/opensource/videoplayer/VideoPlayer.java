@@ -220,7 +220,7 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
 //        values.put(Video.VideoColumns.BOOKMARK, Integer.toString(bookmark));
 //        values.put(Video.VideoColumns.DURATION, Integer.toString(duration));
 //        try {
-//            mContentResolver.update(mUri, values, null, null);
+//            mContentResolver.updateLog(mUri, values, null, null);
 //        } catch (SecurityException ex) {
 //            // Ignore, can happen if we try to set the bookmark on a read-only
 //            // resource such as a video attached to GMail.

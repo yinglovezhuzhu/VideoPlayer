@@ -62,7 +62,7 @@ public class MainActivity extends Activity {
                     public void run() {
 
                         try {
-                            d.download(new DownloadListener() {
+                            d.download(".jpg", new DownloadListener() {
                                 @Override
                                 public void onProgressUpdate(int downloadedSize, int totalSize) {
                                     Log.e("AAAAAAAAAAAAAAAAAAAAA", downloadedSize + "<>" + totalSize);

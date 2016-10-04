@@ -29,6 +29,8 @@ public class DownloadLog {
     private int downloadedSize;
     private int totalSize;
     private String savedFile;
+    private long finishedTime = System.currentTimeMillis();
+    private boolean locked = false;
 
     public DownloadLog() {
 
@@ -80,6 +82,26 @@ public class DownloadLog {
 
     public void setSavedFile(String savedFile) {
         this.savedFile = savedFile;
+    }
+
+    public long getFinishedTime() {
+        return finishedTime;
+    }
+
+    public void setFinishedTime(long finishedTime) {
+        this.finishedTime = finishedTime;
+    }
+
+    public void lock() {
+        this.locked = true;
+    }
+
+    public void unlock() {
+        this.locked = false;
+    }
+
+    public boolean isLocked() {
+        return locked;
     }
 
     @Override

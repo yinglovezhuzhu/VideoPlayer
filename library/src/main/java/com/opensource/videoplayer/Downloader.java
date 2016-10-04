@@ -47,14 +47,15 @@ public class Downloader {
 	
 	private static final String TAG = "DOWNLOADER";
 
-    private static final int BUFFER_SIZE = 1024 * 8 * 256;
+    private static final int BUFFER_SIZE = 1024 * 1024 * 16;
 
 	private static final int RESPONSE_OK = 200;
 	private Context mContext;
 	private boolean mStop = true; // The flag of stopped.
 	private int mFileSize = 0; // The size of the file which to download.
     private File mSaveFolder;
-	private String mFileName; // save file name;
+	private String mFileName; // saveLog file name;
+    private File mSavedFile = null;
 	private DownloadLog mDownloadLog; // The data download state
 	private String mUrl; // The url of the file which to download.
 	
@@ -64,10 +65,10 @@ public class Downloader {
 
 	/**
 	 * Constructor<br><br>
-	 * @param context
-	 * @param downloadUrl
-	 * @param saveFolder
-     * @param fileName 保存文件名称
+	 * @param context Context对象
+	 * @param downloadUrl 下载地址
+	 * @param saveFolder 保存目录
+     * @param fileName 保存文件名称，可以为null，如果为null，将从服务器解析文件名，如果解析失败，则随机生成一个文件名称
 	 */
 	public Downloader(Context context, String downloadUrl, File saveFolder, String fileName) {
         this.mContext = context;
@@ -79,79 +80,149 @@ public class Downloader {
     }
 
 	/**
+	 * Constructor<br><br>
+	 * @param context Context对象
+	 * @param downloadUrl 下载地址
+	 * @param saveFolder 保存目录
+     * @param fileName 保存文件名称，可以为null，如果为null，将从服务器解析文件名，如果解析失败，则随机生成一个文件名称
+     * @param breakPointSupported 是否启用断点
+	 */
+	public Downloader(Context context, String downloadUrl, File saveFolder,
+                      String fileName, boolean breakPointSupported) {
+        this.mContext = context;
+        this.mUrl = downloadUrl;
+        this.mSaveFolder = saveFolder;
+        this.mFileName = fileName;
+        this.mBreakPointSupported = breakPointSupported;
+        checkDownloadFolder(saveFolder);
+    }
+
+	/**
 	 * Download file，this method has network, don't use it on ui thread.
 	 * 
 	 * @param listener The listener to listen download state, can be null if not need.
+     * @param defaultSuffix 默认后缀，没有设置文件名的时候生效，带点，例如".mp4"
 	 * @return The size that downloaded.
 	 * @throws Exception The error happened when downloading.
 	 */
-	public File download(DownloadListener listener) throws Exception {
+	public File download(String defaultSuffix, DownloadListener listener) throws Exception {
+        if(null != mDownloadLog && mDownloadLog.isLocked()) {
+            Log.e(TAG, "File downloading now. url = " + mUrl);
+            return mSavedFile;
+        }
         mStop = false;
-        File savedFile = null;
-        HttpURLConnection conn = null;
-        try {
-            conn = getConnection(mUrl);
-
-            if (conn.getResponseCode() == RESPONSE_OK) {
-                mFileSize = conn.getContentLength();
-                // Throw a RuntimeException when got file size failed.
-                if (mFileSize < 0) {
-                    throw new RuntimeException("Can't get file size ");
-                }
-
-                if(StringUtils.isEmpty(mFileName)) {
-                    String filename = getFileName(conn);
-                    // Create local file object according to local saved folder and local file name.
-                    savedFile = new File(mSaveFolder, filename);
-                } else {
-                    savedFile = new File(mSaveFolder, mFileName);
-                }
-
-                if(mBreakPointSupported) {
-                    mDownloadLog = DownloadDBUtils.getLogByUrl(mContext, mUrl);
-                    if(null == mDownloadLog) {
-                        mDownloadLog = new DownloadLog(mUrl, 0, mFileSize, savedFile.getPath());
-                        DownloadDBUtils.save(mContext, mDownloadLog);
-                    }
-                } else {
-                    mDownloadLog = new DownloadLog(mUrl, 0, mFileSize, savedFile.getPath());
-                }
-                if(null != listener) {
-                    listener.onProgressUpdate(mDownloadLog.getDownloadedSize(), mDownloadLog.getTotalSize());
-                }
-            } else {
-                Log.w(TAG, "Server response error! Response code：" + conn.getResponseCode()
-						+ "Response message：" + conn.getResponseMessage());
-                throw new RuntimeException("server response error, response code:" + conn.getResponseCode());
-            }
-        } catch (Exception e) {
-            Log.e(TAG, e.toString());
-            throw new RuntimeException("Failed to connect the url:" + mUrl, e);
-        } finally {
-            if(null != conn) {
-                conn.disconnect();
+        if(mBreakPointSupported) {
+            mDownloadLog = DownloadDBUtils.getLogByUrl(mContext, mUrl);
+            if(null != mDownloadLog
+                    && mDownloadLog.getDownloadedSize() == mDownloadLog.getTotalSize()) {
+                mSavedFile = new File(mDownloadLog.getSavedFile());
+                DownloadDBUtils.deleteLog(mContext, mUrl);
+                DownloadDBUtils.saveHistory(mContext, mDownloadLog);
+                mFinished = true;
+                mDownloadLog.unlock();
+                mStop = true;
+                Log.w(TAG, "File download finished!");
+                return mSavedFile;
             }
         }
 
-		try {
-			RandomAccessFile randOut = new RandomAccessFile(savedFile, "rwd");
-			if (mFileSize > 0) {
-				randOut.setLength(mFileSize); // Set total size of the download file.
-			}
-			randOut.close(); // Close the RandomAccessFile to make the settings effective
-            mFinished = mDownloadLog.getDownloadedSize() == mDownloadLog.getTotalSize();
-			if (mDownloadLog.getDownloadedSize() == mFileSize) {
-                if(mBreakPointSupported) {
-                	DownloadDBUtils.delete(mContext, mUrl);// Delete download log when finished download
-                }
-				mFinished = true;
-			}
-		} catch (Exception e) {
-			Log.e(TAG, e.toString());// 打印错误
-			throw new Exception("Exception occur when downloading file\n", e);// Throw exception when some error happened when downloading.
-		}
+        if(mFinished) {
+            if(null != mDownloadLog) {
+                mDownloadLog.unlock();
+            }
+            mStop = true;
+            Log.w(TAG, "File download finished!");
+            return mSavedFile;
+        }
 
+        HttpURLConnection conn = null;
         RandomAccessFile randomFile = null;
+
+        if(null == mDownloadLog) {
+            try {
+                conn = getConnection(mUrl);
+                if (conn.getResponseCode() == RESPONSE_OK) {
+                    mFileSize = conn.getContentLength();
+                    // Throw a RuntimeException when got file size failed.
+                    if (mFileSize < 0) {
+                        throw new RuntimeException("Can't get file size ");
+                    }
+
+                    if(StringUtils.isEmpty(mFileName)) {
+                        final String filename = getFileName(conn, defaultSuffix);
+                        // Create local file object according to local saved folder and local file name.
+                        mSavedFile = new File(mSaveFolder, filename);
+                    } else {
+                        mSavedFile = new File(mSaveFolder, mFileName);
+                    }
+
+                    mDownloadLog = new DownloadLog(mUrl, 0, mFileSize, mSavedFile.getPath());
+                    if(mBreakPointSupported) {
+                        DownloadDBUtils.saveLog(mContext, mDownloadLog);
+                    }
+                    if (mDownloadLog.getDownloadedSize() == mFileSize) {
+                        if(mBreakPointSupported) {
+                            DownloadDBUtils.deleteLog(mContext, mUrl);// Delete download log when finished download
+                        }
+                        DownloadDBUtils.saveHistory(mContext, mDownloadLog);
+                        mStop = true;
+                        mFinished = true;
+                        return mSavedFile;
+                    }
+                    mDownloadLog.lock();
+                } else {
+                    if(null != mDownloadLog) {
+                        mDownloadLog.unlock();
+                    }
+                    Log.w(TAG, "Server response error! Response code：" + conn.getResponseCode()
+                            + "Response message：" + conn.getResponseMessage());
+                    throw new RuntimeException("server response error, response code:" + conn.getResponseCode());
+                }
+            } catch (Exception e) {
+                if(null != mDownloadLog) {
+                    mDownloadLog.unlock();
+                }
+                Log.e(TAG, e.toString());
+                throw new RuntimeException("Failed to connect the url:" + mUrl, e);
+            } finally {
+                if(null != conn) {
+                    conn.disconnect();
+                }
+                conn = null;
+            }
+
+            try {
+                randomFile = new RandomAccessFile(mSavedFile, "rwd");
+                if (mFileSize > 0) {
+                    randomFile.setLength(mFileSize); // Set total size of the download file.
+                }
+            } catch (Exception e) {
+                if(null != mDownloadLog) {
+                    mDownloadLog.unlock();
+                }
+                Log.e(TAG, e.toString(), e);// 打印错误
+                throw new Exception("Exception occur when downloading file\n", e);// Throw exception when some error happened when downloading.
+            } finally {
+                if(null != randomFile) {
+                    try {
+                        randomFile.close(); // Close the RandomAccessFile to make the settings effective
+                        randomFile = null;
+                    } catch (Exception e) {
+                        Log.e(TAG, e.toString(), e);
+                    }
+                }
+            }
+        } else {
+            mFileSize = mDownloadLog.getTotalSize();
+            mSavedFile = new File(mDownloadLog.getSavedFile());
+            mSaveFolder = mSavedFile.getParentFile();
+            mFileName = mSavedFile.getName();
+        }
+
+        if(null != listener) {
+            listener.onProgressUpdate(mDownloadLog.getDownloadedSize(), mDownloadLog.getTotalSize());
+        }
+
         InputStream inStream = null;
         try {
             URL url = new URL(mUrl);
@@ -190,7 +261,7 @@ public class Downloader {
             byte[] buffer = new byte[BUFFER_SIZE];
             int offset = 0;
             Log.i(TAG, "Starts to download from position " + startPos);
-            randomFile = new RandomAccessFile(savedFile, "rwd");
+            randomFile = new RandomAccessFile(mSavedFile, "rwd");
             // Make the pointer point to the position where start to download.
             randomFile.seek(startPos);
             // The data is written to file until user stop download or data is finished download.
@@ -198,13 +269,20 @@ public class Downloader {
                 randomFile.write(buffer, 0, offset);
                 mDownloadLog.setDownloadedSize(mDownloadLog.getDownloadedSize() + offset);
                 // Update the range of this thread to database.
-                DownloadDBUtils.update(mContext, mDownloadLog);
+                DownloadDBUtils.updateLog(mContext, mDownloadLog);
                 if(null != listener) {
                     listener.onProgressUpdate(mDownloadLog.getDownloadedSize(), mDownloadLog.getTotalSize());
                 }
             }
-            this.mFinished = true; // 设置完成标志为true，无论是下载完成还是用户主动中断下载
+            this.mFinished = mDownloadLog.getDownloadedSize() == mDownloadLog.getTotalSize();
+
+            if(null != mDownloadLog) {
+                mDownloadLog.unlock();
+            }
         } catch (Exception e) {
+            if(null != mDownloadLog) {
+                mDownloadLog.unlock();
+            }
             Log.e(TAG, e.toString());// 打印错误
             throw new RuntimeException("Failed to download file from " + mUrl, e);
         } finally {
@@ -227,7 +305,7 @@ public class Downloader {
             }
 
         }
-        return savedFile;
+        return mSavedFile;
 	}
 
 
@@ -244,6 +322,9 @@ public class Downloader {
 	 */
 	public synchronized void stop() {
 		this.mStop = true;
+        if(null != mDownloadLog) {
+            mDownloadLog.unlock();
+        }
 	}
 
 	/**
@@ -291,7 +372,7 @@ public class Downloader {
 	
 	/**
 	 * Check the download folder, make new folder if it is not exist.
-	 * @param folder
+	 * @param folder 目录
 	 */
 	private void checkDownloadFolder(File folder) {
 		if (!folder.exists() && !folder.mkdirs()) {
@@ -302,12 +383,13 @@ public class Downloader {
 	/**
 	 * Get file name
 	 * @param conn HttpConnection object
-	 * @return
+     * @param defaultSuffix 默认后缀（后缀格式带点，如".mp4"）
+	 * @return 文件名称，如果不能从网络解析，自动生成一个，后缀为指定的默认后缀
 	 */
-	private String getFileName(HttpURLConnection conn) {
+	private String getFileName(HttpURLConnection conn, String defaultSuffix) {
 		String filename = mUrl.substring(mUrl.lastIndexOf("/") + 1);
 
-		if (null == filename || filename.length() < 1) {// Get file name failed.
+		if (StringUtils.isEmpty(filename)) {// Get file name failed.
 			for (int i = 0;; i++) { // Get file name from http header.
 				String mine = conn.getHeaderField(i);
 				if (mine == null)
@@ -319,7 +401,7 @@ public class Downloader {
 					}
 				}
 			}
-			filename = UUID.randomUUID() + ".tmp";// A 16-byte binary digits generated by a unique identification number
+			filename = UUID.randomUUID() + defaultSuffix;// A 16-byte binary digits generated by a unique identification number
 			                                      // (each card has a unique identification number)
 			                                      // on the card and the CPU clock as the file name
 		}
