@@ -148,7 +148,7 @@ public class Downloader {
 			}
 		} catch (Exception e) {
 			Log.e(TAG, e.toString());// 打印错误
-			throw new Exception("Exception occured when downloading file\n", e);// Throw exception when some error happened when downloading.
+			throw new Exception("Exception occur when downloading file\n", e);// Throw exception when some error happened when downloading.
 		}
 
         RandomAccessFile randomFile = null;
