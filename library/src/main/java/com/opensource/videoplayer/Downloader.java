@@ -344,6 +344,14 @@ public class Downloader {
 		return null == mDownloadLog ? 0 : mDownloadLog.getTotalSize();
 	}
 
+    /**
+     * Gets save file
+     * @return save file
+     */
+    public File getSavedFile() {
+        return mSavedFile;
+    }
+
 	/**
 	 * Get HttpConnection object
 	 * @param downloadUrl the url to download.
