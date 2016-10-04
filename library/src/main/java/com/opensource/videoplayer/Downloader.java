@@ -50,9 +50,9 @@ public class Downloader {
     private static final int BUFFER_SIZE = 1024 * 1024 * 16;
 
 	private static final int RESPONSE_OK = 200;
+
 	private Context mContext;
 	private boolean mStop = true; // The flag of stopped.
-	private int mFileSize = 0; // The size of the file which to download.
     private File mSaveFolder;
 	private String mFileName; // saveLog file name;
     private File mSavedFile = null;
@@ -87,8 +87,8 @@ public class Downloader {
      * @param fileName 保存文件名称，可以为null，如果为null，将从服务器解析文件名，如果解析失败，则随机生成一个文件名称
      * @param breakPointSupported 是否启用断点
 	 */
-	public Downloader(Context context, String downloadUrl, File saveFolder,
-                      String fileName, boolean breakPointSupported) {
+	public Downloader(Context context, String downloadUrl, File saveFolder, String fileName,
+                      boolean breakPointSupported) {
         this.mContext = context;
         this.mUrl = downloadUrl;
         this.mSaveFolder = saveFolder;
@@ -139,12 +139,13 @@ public class Downloader {
         RandomAccessFile randomFile = null;
 
         if(null == mDownloadLog) {
+            int fileSize = 0;
             try {
                 conn = getConnection(mUrl);
                 if (conn.getResponseCode() == RESPONSE_OK) {
-                    mFileSize = conn.getContentLength();
+                    fileSize = conn.getContentLength();
                     // Throw a RuntimeException when got file size failed.
-                    if (mFileSize < 0) {
+                    if (fileSize < 0) {
                         throw new RuntimeException("Can't get file size ");
                     }
 
@@ -156,11 +157,11 @@ public class Downloader {
                         mSavedFile = new File(mSaveFolder, mFileName);
                     }
 
-                    mDownloadLog = new DownloadLog(mUrl, 0, mFileSize, mSavedFile.getPath());
+                    mDownloadLog = new DownloadLog(mUrl, 0, fileSize, mSavedFile.getPath());
                     if(mBreakPointSupported) {
                         DownloadDBUtils.saveLog(mContext, mDownloadLog);
                     }
-                    if (mDownloadLog.getDownloadedSize() == mFileSize) {
+                    if (mDownloadLog.getDownloadedSize() == fileSize) {
                         if(mBreakPointSupported) {
                             DownloadDBUtils.deleteLog(mContext, mUrl);// Delete download log when finished download
                         }
@@ -193,8 +194,8 @@ public class Downloader {
 
             try {
                 randomFile = new RandomAccessFile(mSavedFile, "rwd");
-                if (mFileSize > 0) {
-                    randomFile.setLength(mFileSize); // Set total size of the download file.
+                if (fileSize > 0) {
+                    randomFile.setLength(fileSize); // Set total size of the download file.
                 }
             } catch (Exception e) {
                 if(null != mDownloadLog) {
@@ -213,7 +214,6 @@ public class Downloader {
                 }
             }
         } else {
-            mFileSize = mDownloadLog.getTotalSize();
             mSavedFile = new File(mDownloadLog.getSavedFile());
             mSaveFolder = mSavedFile.getParentFile();
             mFileName = mSavedFile.getName();
@@ -341,7 +341,7 @@ public class Downloader {
 	 * @return
 	 */
 	public int getFileSize() {
-		return mFileSize;
+		return null == mDownloadLog ? 0 : mDownloadLog.getTotalSize();
 	}
 
 	/**
@@ -376,7 +376,7 @@ public class Downloader {
 	 */
 	private void checkDownloadFolder(File folder) {
 		if (!folder.exists() && !folder.mkdirs()) {
-			throw new IllegalStateException("创建目录失败");
+			throw new IllegalStateException("Create folder failed: " + folder.getPath());
 		}
 	}
 	
