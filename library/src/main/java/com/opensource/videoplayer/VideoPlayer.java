@@ -54,6 +54,9 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
         public void run() {
             if (mVideoView.isPlaying()) {
                 mProgressView.setVisibility(View.GONE);
+                if(null == mUri && null != mDownloader) {
+                    mUri = Uri.fromFile(mDownloader.getSavedFile());
+                }
             } else {
                 mHandler.postDelayed(mPlayingChecker, 250);
             }
@@ -141,24 +144,42 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
                         @Override
                         public void onProgressUpdate(int downloadedSize, int totalSize) {
                             Log.e("VideoPlayer", downloadedSize + " / " + totalSize);
-                            if(null == mUri) {
-                                mUri = Uri.fromFile(mDownloader.getSavedFile());
-                                if(null != mUri) {
-                                    mHandler.post(new Runnable() {
-                                        @Override
-                                        public void run() {
-                                            mVideoView.setVideoURI(mUri);
-                                            mVideoView.start();
-                                        }
-                                    });
+                            if(isError) {
+                                if(!buffer) {
+                                    buffSize = downloadedSize;
+                                    buffer = true;
+                                }
+                                if(downloadedSize - buffSize > 1024 * 1024) {
+                                    if(null == mUri) {
+                                        mUri = Uri.fromFile(mDownloader.getSavedFile());
+                                    }
+                                    if(null != mUri) {
+                                        mHandler.post(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                mVideoView.setVideoURI(mUri);
+                                                mVideoView.seekTo(savedSec);
+                                                mVideoView.start();
+                                                mProgressView.setVisibility(View.GONE);
+                                            }
+                                        });
+                                    }
+                                    buffer = false;
+                                    isError = false;
                                 }
                             } else {
-                                mHandler.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        mVideoView.start();
+                                if(null == mUri) {
+                                    mUri = Uri.fromFile(mDownloader.getSavedFile());
+                                    if(null != mUri) {
+                                        mHandler.post(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                mVideoView.setVideoURI(mUri);
+                                                mVideoView.start();
+                                            }
+                                        });
                                     }
-                                });
+                                }
                             }
                         }
                     });
@@ -169,14 +190,21 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
         }).start();
     }
 
+    private boolean isError = false;
+    private boolean buffer = false;
+    private long buffSize = 0;
+    private int savedSec = 0;
+
     @Override
     public boolean onError(MediaPlayer mp, int what, int extra) {
         mHandler.removeCallbacksAndMessages(null);
         mProgressView.setVisibility(View.VISIBLE);
-        mVideoView.pause();
+        savedSec = mp.getCurrentPosition();
+//        mVideoView.pause();
 //        if(null != mPlayingChecker) {
 //            mPlayListener.onError(what, extra);
 //        }
+        isError = true;
         return true;
     }
 
