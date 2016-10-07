@@ -42,11 +42,12 @@ public class MainActivity extends Activity {
         findViewById(R.id.btn_local).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                Intent i = new Intent(MainActivity.this, VideoActivity.class);
-////                i.setData(Uri.parse("/storage/emulated/0/DCIM/Camera/VID_20160816_165126.mp4"));
-//                i.setData(Uri.parse("/storage/sdcard1/DCIM/Camera/Video/VID_20160501_080038.mp4"));
-//                startActivity(i);
-                d.stop();
+                Intent i = new Intent(MainActivity.this, VideoActivity.class);
+//                i.setData(Uri.parse("/storage/emulated/0/DCIM/Camera/VID_20160816_165126.mp4"));
+//                i.setData(Uri.parse("/storage/sdcard1/DCIM/Camera/Video/VID_20151121_175527.mp4"));
+                i.setData(Uri.parse("/storage/emulated/0/Android/data/com.opensource.videoplayer.test/cache/FUKESI.mp4"));
+                startActivity(i);
+//                d.stop();
             }
         });
 
@@ -54,25 +55,26 @@ public class MainActivity extends Activity {
         findViewById(R.id.btn_network).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                Intent i = new Intent(MainActivity.this, VideoActivity.class);
+                Intent i = new Intent(MainActivity.this, VideoActivity.class);
 //                i.setData(Uri.parse("http://172.16.10.84/test.mp4"));
-//                startActivity(i);
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-
-                        try {
-                            d.download(".jpg", new DownloadListener() {
-                                @Override
-                                public void onProgressUpdate(int downloadedSize, int totalSize) {
-                                    Log.e("AAAAAAAAAAAAAAAAAAAAA", downloadedSize + "<>" + totalSize);
-                                }
-                            });
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }).start();
+                i.setData(Uri.parse("http://120.24.234.204/static/upload/video/FUKESI.mp4"));
+                startActivity(i);
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//
+//                        try {
+//                            d.download(".jpg", new DownloadListener() {
+//                                @Override
+//                                public void onProgressUpdate(int downloadedSize, int totalSize) {
+//                                    Log.e("AAAAAAAAAAAAAAAAAAAAA", downloadedSize + "<>" + totalSize);
+//                                }
+//                            });
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }).start();
             }
         });
 

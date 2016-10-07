@@ -18,34 +18,33 @@
 
 package com.opensource.videoplayer;
 
-import android.app.AlertDialog;
 import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnCancelListener;
-import android.content.DialogInterface.OnClickListener;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteException;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Handler;
-import android.provider.MediaStore;
-import android.provider.MediaStore.Video;
+import android.util.Log;
 import android.view.View;
 import android.widget.MediaController;
 import android.widget.VideoView;
 
+import java.io.File;
 
-public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener {
+
+public class VideoPlayer implements MediaPlayer.OnErrorListener,
+        MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener {
 
     private static final int HALF_MINUTE = 30 * 1000;
     private static final int TWO_MINUTES = 4 * HALF_MINUTE;
 
     private final VideoView mVideoView;
     private final View mProgressView;
-    private final Uri mUri;
+    private Uri mUri;
     private final ContentResolver mContentResolver;
+
+    private Downloader mDownloader;
 
     private PlayListener mPlayListener = null;
 
@@ -61,26 +60,26 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
         }
     };
 
-    public VideoPlayer(View rootView, Context context, Uri videoUri) {
+    public VideoPlayer(View rootView, final Context context, Uri videoUri) {
         mContentResolver = context.getContentResolver();
         mVideoView = (VideoView) rootView.findViewById(R.id.video_player_surface_view);
         mProgressView = rootView.findViewById(R.id.video_player_progress_indicator);
 
-        mUri = videoUri;
+//        mUri = videoUri;
 
         // For streams that we expect to be slow to start up, show a
         // progress spinner until playback starts.
-        String scheme = mUri.getScheme();
-        if (null != scheme && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")
-                || scheme.equalsIgnoreCase("ftp") || "rtsp".equalsIgnoreCase(scheme))) {
-            mHandler.postDelayed(mPlayingChecker, 250);
-        } else {
-            mProgressView.setVisibility(View.GONE);
-        }
+//        String scheme = mUri.getScheme();
+//        if (null != scheme && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")
+//                || scheme.equalsIgnoreCase("ftp") || "rtsp".equalsIgnoreCase(scheme))) {
+//            mHandler.postDelayed(mPlayingChecker, 250);
+//        } else {
+//            mProgressView.setVisibility(View.GONE);
+//        }
 
         mVideoView.setOnErrorListener(this);
         mVideoView.setOnCompletionListener(this);
-        mVideoView.setVideoURI(mUri);
+//        mVideoView.setVideoURI(mUri);
         mVideoView.setMediaController(new MediaController(context));
 
         // make the video view handle keys for seeking and pausing
@@ -115,17 +114,70 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
 //        } else {
 //            mVideoView.start();
 //        }
-        mVideoView.start();
+
+//        mVideoView.start();
+        String scheme = videoUri.getScheme();
+        if (null != scheme && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")
+                || scheme.equalsIgnoreCase("ftp") || "rtsp".equalsIgnoreCase(scheme))) {
+            mHandler.postDelayed(mPlayingChecker, 250);
+        } else {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    mProgressView.setVisibility(View.GONE);
+                }
+            });
+            mUri = videoUri;
+            mVideoView.setVideoURI(mUri);
+            mVideoView.start();
+        }
+
+        mDownloader = new Downloader(context, videoUri.toString(), context.getExternalCacheDir(), null);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    mDownloader.download(".mp4", new DownloadListener() {
+                        @Override
+                        public void onProgressUpdate(int downloadedSize, int totalSize) {
+                            Log.e("VideoPlayer", downloadedSize + " / " + totalSize);
+                            if(null == mUri) {
+                                mUri = Uri.fromFile(mDownloader.getSavedFile());
+                                if(null != mUri) {
+                                    mHandler.post(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            mVideoView.setVideoURI(mUri);
+                                            mVideoView.start();
+                                        }
+                                    });
+                                }
+                            } else {
+                                mHandler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mVideoView.start();
+                                    }
+                                });
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     @Override
     public boolean onError(MediaPlayer mp, int what, int extra) {
         mHandler.removeCallbacksAndMessages(null);
-        mProgressView.setVisibility(View.GONE);
-        if(null != mPlayingChecker) {
-            mPlayListener.onError(what, extra);
-        }
-        return false;
+        mProgressView.setVisibility(View.VISIBLE);
+        mVideoView.pause();
+//        if(null != mPlayingChecker) {
+//            mPlayListener.onError(what, extra);
+//        }
+        return true;
     }
 
     @Override
@@ -133,6 +185,11 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
         if(null != mPlayListener) {
             mPlayListener.onCompletion();
         }
+    }
+
+    @Override
+    public void onPrepared(MediaPlayer mp) {
+        Log.e("WWWWWWWWW", "onPrepared");
     }
 
     /**
@@ -160,6 +217,9 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
     public void onDestroy() {
         if(null != mVideoView) {
             mVideoView.stopPlayback();
+        }
+        if(null != mDownloader) {
+            mDownloader.stop();
         }
     }
 
@@ -245,5 +305,4 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener, MediaPlayer.OnC
         }
         return durationValue;
     }
-
 }

@@ -44,10 +44,10 @@ import java.util.regex.Pattern;
  *
  */
 public class Downloader {
-	
+
 	private static final String TAG = "DOWNLOADER";
 
-    private static final int BUFFER_SIZE = 1024 * 1024 * 16;
+    private static final int BUFFER_SIZE = 1024 * 32;
 
 	private static final int RESPONSE_OK = 200;
 
@@ -58,9 +58,9 @@ public class Downloader {
     private File mSavedFile = null;
 	private DownloadLog mDownloadLog; // The data download state
 	private String mUrl; // The url of the file which to download.
-	
+
 	private boolean mFinished = false;
-	
+
 	private boolean mBreakPointSupported = true;
 
 	/**
@@ -99,7 +99,7 @@ public class Downloader {
 
 	/**
 	 * Download file，this method has network, don't use it on ui thread.
-	 * 
+	 *
 	 * @param listener The listener to listen download state, can be null if not need.
      * @param defaultSuffix 默认后缀，没有设置文件名的时候生效，带点，例如".mp4"
 	 * @return The size that downloaded.
@@ -236,6 +236,8 @@ public class Downloader {
 
             // Get the position of this thread start to download.
             int startPos = mDownloadLog.getDownloadedSize();
+//            int startPos = mDownloadLog.getTotalSize() - 1024 * 512;
+
             // Get the position of this thread end to download.
             int endPos = mDownloadLog.getTotalSize();
 
@@ -269,11 +271,12 @@ public class Downloader {
                 randomFile.write(buffer, 0, offset);
                 mDownloadLog.setDownloadedSize(mDownloadLog.getDownloadedSize() + offset);
                 // Update the range of this thread to database.
-                DownloadDBUtils.updateLog(mContext, mDownloadLog);
+//                DownloadDBUtils.updateLog(mContext, mDownloadLog);
                 if(null != listener) {
                     listener.onProgressUpdate(mDownloadLog.getDownloadedSize(), mDownloadLog.getTotalSize());
                 }
             }
+            DownloadDBUtils.updateLog(mContext, mDownloadLog);
             this.mFinished = mDownloadLog.getDownloadedSize() == mDownloadLog.getTotalSize();
 
             if(null != mDownloadLog) {
@@ -337,7 +340,7 @@ public class Downloader {
 
 	/**
 	 * Get total file size
-	 * 
+	 *
 	 * @return
 	 */
 	public int getFileSize() {
