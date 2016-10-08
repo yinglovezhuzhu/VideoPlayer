@@ -185,6 +185,7 @@ public class Downloader {
             mFileName = mSavedFile.getName();
         }
 
+        // 下载视频数据的尾部部分，否则播放器无法解析视频文件
         downloadFileEnd(mContext, 1024 * 512);
 
         if(null != listener) {
@@ -257,6 +258,42 @@ public class Downloader {
         return mSavedFile;
 	}
 
+	/**
+	 * Stop the download
+	 */
+	public synchronized void stop() {
+		this.mStop = true;
+        if(null != mDownloadLog) {
+            mDownloadLog.unlock();
+        }
+	}
+
+	/**
+	 * Get download state is stopped or not.
+	 * @return
+	 */
+	public synchronized boolean isStop() {
+		return this.mStop;
+	}
+
+	/**
+	 * Get total file size
+	 *
+	 * @return
+	 */
+	public int getFileSize() {
+		return null == mDownloadLog ? 0 : mDownloadLog.getTotalSize();
+	}
+
+    /**
+     * Gets save file
+     * @return save file
+     */
+    public File getSavedFile() {
+        return mSavedFile;
+    }
+
+
     /**
      * 下载文件的最尾部分数据<br>
      *     mp4视频文件如果最后部分没有下载下来，将无法播放，直到下载完成，这里先将文件的最后部分下载下来，
@@ -323,42 +360,6 @@ public class Downloader {
                 conn.disconnect();
             }
         }
-    }
-
-
-	/**
-	 * Stop the download
-	 */
-	public synchronized void stop() {
-		this.mStop = true;
-        if(null != mDownloadLog) {
-            mDownloadLog.unlock();
-        }
-	}
-
-	/**
-	 * Get download state is stopped or not.
-	 * @return
-	 */
-	public synchronized boolean isStop() {
-		return this.mStop;
-	}
-
-	/**
-	 * Get total file size
-	 *
-	 * @return
-	 */
-	public int getFileSize() {
-		return null == mDownloadLog ? 0 : mDownloadLog.getTotalSize();
-	}
-
-    /**
-     * Gets save file
-     * @return save file
-     */
-    public File getSavedFile() {
-        return mSavedFile;
     }
 
 	/**

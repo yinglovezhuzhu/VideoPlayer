@@ -51,7 +51,7 @@ public class VideoActivity extends Activity {
             }
 
             @Override
-            public void onError(int what, int extra) {
+            public void onError(int what, String msg) {
 
             }
         });

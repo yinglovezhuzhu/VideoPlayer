@@ -19,8 +19,6 @@
 package com.opensource.videoplayer;
 
 import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteException;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Handler;
@@ -38,10 +36,14 @@ import java.io.File;
 public class VideoPlayer implements MediaPlayer.OnErrorListener,
         MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener, Handler.Callback {
 
+    /** 消息：下载错误 **/
+    private static final int MSG_DOWNLOAD_ERROR = 0x01;
+    /** 消息：缓存完毕 **/
+    private static final int MSG_CACHE_READY = 0x02;
+    /** 消息：获取到播放文件URI **/
+    private static final int MSG_GET_URI = 0x03;
 
-
-    private static final int HALF_MINUTE = 30 * 1000;
-    private static final int TWO_MINUTES = 4 * HALF_MINUTE;
+    private static final int CACHE_MIN_SIZE = 1024 * 1024;
 
     private final VideoView mVideoView;
     private final View mProgressView;
@@ -50,6 +52,10 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
     private int mCurrentPosition = 0;
     /** 当前处于错误状态下 **/
     private boolean mOnError = false;
+    /** 正在缓存数据 **/
+    private boolean mCaching = false;
+    /** 开始缓存的下载长度 **/
+    private long mStartCachingSize = 0;
 
     private Downloader mDownloader;
 
@@ -61,9 +67,6 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
         public void run() {
             if (mVideoView.isPlaying()) {
                 mProgressView.setVisibility(View.GONE);
-                if(null == mUri && null != mDownloader) {
-                    mUri = Uri.fromFile(mDownloader.getSavedFile());
-                }
             } else {
                 mHandler.postDelayed(mPlayingChecker, 250);
             }
@@ -111,7 +114,7 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
                         DownloadDBUtils.deleteLog(context, url);
                     }
                 }
-                mDownloader = new Downloader(context, videoUri.toString(), context.getExternalCacheDir(), null);
+                mDownloader = new Downloader(context, videoUri.toString(), new File(context.getExternalCacheDir(), "Video"), null);
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -121,46 +124,28 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
                                 public void onProgressUpdate(int downloadedSize, int totalSize) {
                                     Log.e("VideoPlayer", downloadedSize + " / " + totalSize);
                                     if(mOnError) {
-                                        if(!buffer) {
-                                            buffSize = downloadedSize;
-                                            buffer = true;
+                                        if(!mCaching) {
+                                            mStartCachingSize = downloadedSize;
+                                            mCaching = true;
                                         }
-                                        if(downloadedSize - buffSize > 1024 * 1024) {
+                                        if(downloadedSize - mStartCachingSize > CACHE_MIN_SIZE) {
                                             if(null == mUri) {
                                                 mUri = Uri.fromFile(mDownloader.getSavedFile());
                                             }
-                                            if(null != mUri) {
-                                                mHandler.post(new Runnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        mVideoView.setVideoURI(mUri);
-                                                        mVideoView.seekTo(mCurrentPosition);
-                                                        mVideoView.start();
-                                                        mProgressView.setVisibility(View.GONE);
-                                                    }
-                                                });
-                                            }
-                                            buffer = false;
+                                            mCaching = false;
                                             mOnError = false;
+                                            mHandler.sendMessage(mHandler.obtainMessage(MSG_CACHE_READY, mUri));
                                         }
                                     } else {
                                         if(null == mUri) {
                                             mUri = Uri.fromFile(mDownloader.getSavedFile());
-                                            if(null != mUri) {
-                                                mHandler.post(new Runnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        mVideoView.setVideoURI(mUri);
-                                                        mVideoView.start();
-                                                    }
-                                                });
-                                            }
+                                            mHandler.sendMessage(mHandler.obtainMessage(MSG_GET_URI, mUri));
                                         }
                                     }
                                 }
                             });
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            mHandler.sendMessage(mHandler.obtainMessage(MSG_DOWNLOAD_ERROR, e));
                         }
                     }
                 }).start();
@@ -174,9 +159,6 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
         }
     }
 
-
-    private boolean buffer = false;
-    private long buffSize = 0;
 
     @Override
     public boolean onError(MediaPlayer mp, int what, int extra) {
@@ -196,11 +178,37 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
 
     @Override
     public void onPrepared(MediaPlayer mp) {
-        Log.e("WWWWWWWWW", "onPrepared");
+
     }
 
     @Override
     public boolean handleMessage(Message msg) {
+        switch (msg.what) {
+            case MSG_DOWNLOAD_ERROR:
+                if(null != mPlayListener) {
+                    mPlayListener.onError(PlayListener.WHAT_DOWNLOAD_ERROR,
+                            "Video download failed: " + (null == msg.obj ? "" : ((Exception) msg.obj).getMessage()));
+                }
+                return true;
+            case MSG_CACHE_READY:
+                if(null != mUri && null != mVideoView) {
+                    mVideoView.setVideoURI(mUri);
+                    mVideoView.seekTo(mCurrentPosition);
+                    mVideoView.start();
+                }
+                if(null != mProgressView) {
+                    mProgressView.setVisibility(View.GONE);
+                }
+                return true;
+            case MSG_GET_URI:
+                if(null != mUri && null != mVideoView) {
+                    mVideoView.setVideoURI(mUri);
+                    mVideoView.start();
+                }
+                return true;
+            default:
+                break;
+        }
         return false;
     }
 

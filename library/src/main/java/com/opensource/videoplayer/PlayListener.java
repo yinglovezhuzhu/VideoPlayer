@@ -23,7 +23,11 @@ package com.opensource.videoplayer;
  * Created by yinglovezhuzhu@gmail.com on 2016/8/17.
  */
 public interface PlayListener {
-    public void onCompletion();
 
-    public void onError(int what, int extra);
+    /** 视频文件下载错误 **/
+    int WHAT_DOWNLOAD_ERROR = 1;
+
+    void onCompletion();
+
+    void onError(int what, String msg);
 }
