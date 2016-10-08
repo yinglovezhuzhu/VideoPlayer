@@ -21,16 +21,22 @@ package com.opensource.videoplayer;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.MediaController;
+import android.widget.VideoView;
 
 /**
  * This activity plays a video from a specified URI.
  */
-public class VideoActivity extends Activity {
+public class VideoActivity extends Activity implements IVideoPlayerView {
+
+    private VideoView mVideoView;
+    private View mProgressView;
 
     private VideoPlayer mVideoPlayer;
     private boolean mFinishOnCompletion;
@@ -39,9 +45,16 @@ public class VideoActivity extends Activity {
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
         setContentView(R.layout.activity_video_player);
-        View rootView = findViewById(R.id.view_video_player_root);
+
+        mVideoView = (VideoView) findViewById(R.id.video_player_surface_view);
+        mProgressView = findViewById(R.id.video_player_progress_indicator);
+
+        // make the video view handle keys for seeking and pausing
+        mVideoView.requestFocus();
+
         Intent intent = getIntent();
-        mVideoPlayer = new VideoPlayer(rootView, this, intent.getData());
+
+        mVideoPlayer = new VideoPlayer(this, this, intent.getData());
         mVideoPlayer.setPlayListener(new PlayListener() {
             @Override
             public void onCompletion() {
@@ -74,18 +87,61 @@ public class VideoActivity extends Activity {
     @Override
     public void onPause() {
         mVideoPlayer.onPause();
+        if(null != mVideoView) {
+            mVideoView.suspend();
+        }
         super.onPause();
     }
 
     @Override
     public void onResume() {
         mVideoPlayer.onResume();
+        if(null != mVideoView) {
+            mVideoView.resume();
+        }
         super.onResume();
     }
     
     @Override
     public void onDestroy() {
         mVideoPlayer.onDestroy();
+        if(null != mVideoView) {
+            mVideoView.stopPlayback();
+        }
     	super.onDestroy();
+    }
+
+    @Override
+    public void playVideo(Uri uri, int position) {
+        if(null == mVideoView || null == uri) {
+            return;
+        }
+        mVideoView.setVideoURI(uri);
+        mVideoView.seekTo(position);
+        mVideoView.start();
+    }
+
+    @Override
+    public boolean isPlaying() {
+        if(null == mVideoView) {
+            return false;
+        }
+        return mVideoView.isPlaying();
+    }
+
+    @Override
+    public void showLoadingProgress() {
+        if(null == mProgressView) {
+            return;
+        }
+        mProgressView.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public void hideLoadingProgress() {
+        if(null == mProgressView) {
+            return;
+        }
+        mProgressView.setVisibility(View.GONE);
     }
 }

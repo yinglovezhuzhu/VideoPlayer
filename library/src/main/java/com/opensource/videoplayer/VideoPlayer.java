@@ -45,8 +45,7 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
 
     private static final int CACHE_MIN_SIZE = 1024 * 1024;
 
-    private final VideoView mVideoView;
-    private final View mProgressView;
+    private IVideoPlayerView mView;
     private Uri mUri;
     /** 当前播放进度 **/
     private int mCurrentPosition = 0;
@@ -65,24 +64,16 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
 
     private final Runnable mPlayingChecker = new Runnable() {
         public void run() {
-            if (mVideoView.isPlaying()) {
-                mProgressView.setVisibility(View.GONE);
+            if (mView.isPlaying()) {
+                mView.hideLoadingProgress();
             } else {
                 mHandler.postDelayed(mPlayingChecker, 250);
             }
         }
     };
 
-    public VideoPlayer(View rootView, final Context context, Uri videoUri) {
-        mVideoView = (VideoView) rootView.findViewById(R.id.video_player_surface_view);
-        mProgressView = rootView.findViewById(R.id.video_player_progress_indicator);
-
-        mVideoView.setOnErrorListener(this);
-        mVideoView.setOnCompletionListener(this);
-        mVideoView.setMediaController(new MediaController(context));
-
-        // make the video view handle keys for seeking and pausing
-        mVideoView.requestFocus();
+    public VideoPlayer(final Context context, IVideoPlayerView view, Uri videoUri) {
+        this.mView = view;
 
         // For streams that we expect to be slow to start up, show a
         // progress spinner until playback starts.
@@ -95,10 +86,9 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
             DownloadLog history = DownloadDBUtils.getHistoryByUrl(context, url);
             if(null != history && (cacheFile = new File(history.getSavedFile())).exists()) {
                 // 网络视频，且已经有下载记录,并且缓存存在，直接播放缓存
-                mProgressView.setVisibility(View.GONE);
+                mView.hideLoadingProgress();
                 mUri = Uri.fromFile(cacheFile);
-                mVideoView.setVideoURI(mUri);
-                mVideoView.start();
+                mView.playVideo(mUri, 0);
             } else {
                 // 网络视频，没有下载记录（未下载完成或者还没有开始下载）
                 mHandler.postDelayed(mPlayingChecker, 250);
@@ -107,8 +97,7 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
                     cacheFile = new File(log.getSavedFile());
                     if(cacheFile.exists()) {
                         mUri = Uri.fromFile(cacheFile);
-                        mVideoView.setVideoURI(mUri);
-                        mVideoView.start();
+                        mView.playVideo(mUri, 0);
                     } else {
                         // 缓存文件丢失，删除下载日志
                         DownloadDBUtils.deleteLog(context, url);
@@ -152,10 +141,9 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
             }
 
         } else {
-            mProgressView.setVisibility(View.GONE);
             mUri = videoUri;
-            mVideoView.setVideoURI(mUri);
-            mVideoView.start();
+            mView.hideLoadingProgress();
+            mView.playVideo(mUri, 0);
         }
     }
 
@@ -163,7 +151,7 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
     @Override
     public boolean onError(MediaPlayer mp, int what, int extra) {
         mHandler.removeCallbacksAndMessages(null);
-        mProgressView.setVisibility(View.VISIBLE);
+        mView.showLoadingProgress();
         mCurrentPosition = mp.getCurrentPosition();
         mOnError = true;
         return true;
@@ -191,20 +179,11 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
                 }
                 return true;
             case MSG_CACHE_READY:
-                if(null != mUri && null != mVideoView) {
-                    mVideoView.setVideoURI(mUri);
-                    mVideoView.seekTo(mCurrentPosition);
-                    mVideoView.start();
-                }
-                if(null != mProgressView) {
-                    mProgressView.setVisibility(View.GONE);
-                }
+                mView.playVideo(mUri, mCurrentPosition);
+                mView.hideLoadingProgress();
                 return true;
             case MSG_GET_URI:
-                if(null != mUri && null != mVideoView) {
-                    mVideoView.setVideoURI(mUri);
-                    mVideoView.start();
-                }
+                mView.playVideo(mUri, 0);
                 return true;
             default:
                 break;
@@ -222,21 +201,13 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
 
     public void onPause() {
         mHandler.removeCallbacksAndMessages(null);
-        if(null != mVideoView) {
-            mVideoView.suspend();
-        }
+
     }
 
     public void onResume() {
-        if(null != mVideoView) {
-            mVideoView.resume();
-        }
     }
 
     public void onDestroy() {
-        if(null != mVideoView) {
-            mVideoView.stopPlayback();
-        }
         if(null != mDownloader) {
             mDownloader.stop();
         }
