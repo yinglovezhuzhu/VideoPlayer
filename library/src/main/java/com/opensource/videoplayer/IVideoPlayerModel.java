@@ -18,9 +18,16 @@
 
 package com.opensource.videoplayer;
 
+import android.content.Context;
+
+import java.io.File;
+
 /**
+ * 下载Model接口
  * Created by yinglovezhuzhu@gmail.com on 2016/10/8.
  */
 
 public interface IVideoPlayerModel {
+
+    void download(Context context, String downloadUrl);
 }
