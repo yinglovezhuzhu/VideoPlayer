@@ -308,7 +308,8 @@ public class Downloader {
      * @param byteSize 需要下载的文件尾部的长度
      */
     private void downloadFileEnd(Context context, int byteSize) {
-        if(null == mDownloadLog || mDownloadLog.isEndDownloaded()) {
+        if(null == mDownloadLog || mDownloadLog.isEndDownloaded()
+                | mDownloadLog.getDownloadedSize() >= mDownloadLog.getTotalSize()) {
             return;
         }
         HttpURLConnection conn = null;
@@ -342,6 +343,7 @@ public class Downloader {
             while (!mStop && (offset = inStream.read(buffer)) != -1) {
                 outFile.write(buffer, 0, offset);
             }
+            mDownloadLog.setEndDownloaded(true);
             DownloadDBUtils.updateLog(context, mDownloadLog);
         } catch (Exception e) {
             Log.e(TAG, e.toString());// 打印错误

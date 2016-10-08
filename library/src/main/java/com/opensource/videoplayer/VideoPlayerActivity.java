@@ -27,12 +27,13 @@ import android.provider.MediaStore;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.MediaController;
 import android.widget.VideoView;
 
 /**
  * This activity plays a video from a specified URI.
  */
-public class VideoActivity extends Activity implements IVideoPlayerView {
+public class VideoPlayerActivity extends Activity implements IVideoPlayerView {
 
     private VideoView mVideoView;
     private View mProgressView;
@@ -48,6 +49,7 @@ public class VideoActivity extends Activity implements IVideoPlayerView {
         mVideoView = (VideoView) findViewById(R.id.video_player_surface_view);
         mProgressView = findViewById(R.id.video_player_progress_indicator);
 
+        mVideoView.setMediaController(new MediaController(this));
         // make the video view handle keys for seeking and pausing
         mVideoView.requestFocus();
         mVideoView.setKeepScreenOn(true);
