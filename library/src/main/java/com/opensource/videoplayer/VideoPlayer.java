@@ -18,23 +18,27 @@
 
 package com.opensource.videoplayer;
 
-import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteException;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.MediaController;
 import android.widget.VideoView;
 
+import com.opensource.videoplayer.db.DownloadDBUtils;
+
 import java.io.File;
 
 
 public class VideoPlayer implements MediaPlayer.OnErrorListener,
-        MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener {
+        MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener, Handler.Callback {
+
+
 
     private static final int HALF_MINUTE = 30 * 1000;
     private static final int TWO_MINUTES = 4 * HALF_MINUTE;
@@ -42,13 +46,16 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
     private final VideoView mVideoView;
     private final View mProgressView;
     private Uri mUri;
-    private final ContentResolver mContentResolver;
+    /** 当前播放进度 **/
+    private int mCurrentPosition = 0;
+    /** 当前处于错误状态下 **/
+    private boolean mOnError = false;
 
     private Downloader mDownloader;
 
     private PlayListener mPlayListener = null;
 
-    private final Handler mHandler = new Handler();
+    private final Handler mHandler = new Handler(this);
 
     private final Runnable mPlayingChecker = new Runnable() {
         public void run() {
@@ -64,147 +71,119 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
     };
 
     public VideoPlayer(View rootView, final Context context, Uri videoUri) {
-        mContentResolver = context.getContentResolver();
         mVideoView = (VideoView) rootView.findViewById(R.id.video_player_surface_view);
         mProgressView = rootView.findViewById(R.id.video_player_progress_indicator);
 
-//        mUri = videoUri;
-
-        // For streams that we expect to be slow to start up, show a
-        // progress spinner until playback starts.
-//        String scheme = mUri.getScheme();
-//        if (null != scheme && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")
-//                || scheme.equalsIgnoreCase("ftp") || "rtsp".equalsIgnoreCase(scheme))) {
-//            mHandler.postDelayed(mPlayingChecker, 250);
-//        } else {
-//            mProgressView.setVisibility(View.GONE);
-//        }
-
         mVideoView.setOnErrorListener(this);
         mVideoView.setOnCompletionListener(this);
-//        mVideoView.setVideoURI(mUri);
         mVideoView.setMediaController(new MediaController(context));
 
         // make the video view handle keys for seeking and pausing
         mVideoView.requestFocus();
 
-//        final Integer bookmark = getBookmark();
-//        if (bookmark != null) {
-//            AlertDialog.Builder builder = new AlertDialog.Builder(context);
-//            builder.setTitle(R.string.resume_playing_title);
-//            builder.setMessage(String
-//                            .format(context.getString(R.string.resume_playing_message),
-//                                    formatDuration(context, bookmark)));
-//            builder.setOnCancelListener(new OnCancelListener() {
-//                public void onCancel(DialogInterface dialog) {
-//                    if(null != mPlayListener) {
-//                        mPlayListener.onCompletion();
-//                    }
-//                }
-//            });
-//            builder.setPositiveButton(R.string.resume_playing_resume, new OnClickListener() {
-//                public void onClick(DialogInterface dialog, int which) {
-//                    mVideoView.seekTo(bookmark);
-//                    mVideoView.start();
-//                }
-//            });
-//            builder.setNegativeButton(R.string.resume_playing_restart, new OnClickListener() {
-//                public void onClick(DialogInterface dialog, int which) {
-//                    mVideoView.start();
-//                }
-//            });
-//            builder.show();
-//        } else {
-//            mVideoView.start();
-//        }
-
-//        mVideoView.start();
+        // For streams that we expect to be slow to start up, show a
+        // progress spinner until playback starts.
         String scheme = videoUri.getScheme();
         if (null != scheme && (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https")
                 || scheme.equalsIgnoreCase("ftp") || "rtsp".equalsIgnoreCase(scheme))) {
-            mHandler.postDelayed(mPlayingChecker, 250);
-        } else {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    mProgressView.setVisibility(View.GONE);
+            // 网络视频
+            final String url = videoUri.toString();
+            File cacheFile;
+            DownloadLog history = DownloadDBUtils.getHistoryByUrl(context, url);
+            if(null != history && (cacheFile = new File(history.getSavedFile())).exists()) {
+                // 网络视频，且已经有下载记录,并且缓存存在，直接播放缓存
+                mProgressView.setVisibility(View.GONE);
+                mUri = Uri.fromFile(cacheFile);
+                mVideoView.setVideoURI(mUri);
+                mVideoView.start();
+            } else {
+                // 网络视频，没有下载记录（未下载完成或者还没有开始下载）
+                mHandler.postDelayed(mPlayingChecker, 250);
+                DownloadLog log = DownloadDBUtils.getLogByUrl(context, url);
+                if(null != log) {
+                    cacheFile = new File(log.getSavedFile());
+                    if(cacheFile.exists()) {
+                        mUri = Uri.fromFile(cacheFile);
+                        mVideoView.setVideoURI(mUri);
+                        mVideoView.start();
+                    } else {
+                        // 缓存文件丢失，删除下载日志
+                        DownloadDBUtils.deleteLog(context, url);
+                    }
                 }
-            });
+                mDownloader = new Downloader(context, videoUri.toString(), context.getExternalCacheDir(), null);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            mDownloader.download(".mp4", new DownloadListener() {
+                                @Override
+                                public void onProgressUpdate(int downloadedSize, int totalSize) {
+                                    Log.e("VideoPlayer", downloadedSize + " / " + totalSize);
+                                    if(mOnError) {
+                                        if(!buffer) {
+                                            buffSize = downloadedSize;
+                                            buffer = true;
+                                        }
+                                        if(downloadedSize - buffSize > 1024 * 1024) {
+                                            if(null == mUri) {
+                                                mUri = Uri.fromFile(mDownloader.getSavedFile());
+                                            }
+                                            if(null != mUri) {
+                                                mHandler.post(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        mVideoView.setVideoURI(mUri);
+                                                        mVideoView.seekTo(mCurrentPosition);
+                                                        mVideoView.start();
+                                                        mProgressView.setVisibility(View.GONE);
+                                                    }
+                                                });
+                                            }
+                                            buffer = false;
+                                            mOnError = false;
+                                        }
+                                    } else {
+                                        if(null == mUri) {
+                                            mUri = Uri.fromFile(mDownloader.getSavedFile());
+                                            if(null != mUri) {
+                                                mHandler.post(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        mVideoView.setVideoURI(mUri);
+                                                        mVideoView.start();
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
+            }
+
+        } else {
+            mProgressView.setVisibility(View.GONE);
             mUri = videoUri;
             mVideoView.setVideoURI(mUri);
             mVideoView.start();
         }
-
-        mDownloader = new Downloader(context, videoUri.toString(), context.getExternalCacheDir(), null);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    mDownloader.download(".mp4", new DownloadListener() {
-                        @Override
-                        public void onProgressUpdate(int downloadedSize, int totalSize) {
-                            Log.e("VideoPlayer", downloadedSize + " / " + totalSize);
-                            if(isError) {
-                                if(!buffer) {
-                                    buffSize = downloadedSize;
-                                    buffer = true;
-                                }
-                                if(downloadedSize - buffSize > 1024 * 1024) {
-                                    if(null == mUri) {
-                                        mUri = Uri.fromFile(mDownloader.getSavedFile());
-                                    }
-                                    if(null != mUri) {
-                                        mHandler.post(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                mVideoView.setVideoURI(mUri);
-                                                mVideoView.seekTo(savedSec);
-                                                mVideoView.start();
-                                                mProgressView.setVisibility(View.GONE);
-                                            }
-                                        });
-                                    }
-                                    buffer = false;
-                                    isError = false;
-                                }
-                            } else {
-                                if(null == mUri) {
-                                    mUri = Uri.fromFile(mDownloader.getSavedFile());
-                                    if(null != mUri) {
-                                        mHandler.post(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                mVideoView.setVideoURI(mUri);
-                                                mVideoView.start();
-                                            }
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    });
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }).start();
     }
 
-    private boolean isError = false;
+
     private boolean buffer = false;
     private long buffSize = 0;
-    private int savedSec = 0;
 
     @Override
     public boolean onError(MediaPlayer mp, int what, int extra) {
         mHandler.removeCallbacksAndMessages(null);
         mProgressView.setVisibility(View.VISIBLE);
-        savedSec = mp.getCurrentPosition();
-//        mVideoView.pause();
-//        if(null != mPlayingChecker) {
-//            mPlayListener.onError(what, extra);
-//        }
-        isError = true;
+        mCurrentPosition = mp.getCurrentPosition();
+        mOnError = true;
         return true;
     }
 
@@ -220,6 +199,11 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
         Log.e("WWWWWWWWW", "onPrepared");
     }
 
+    @Override
+    public boolean handleMessage(Message msg) {
+        return false;
+    }
+
     /**
      * 设置播放监听
      * @param listener
@@ -231,7 +215,6 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
     public void onPause() {
         mHandler.removeCallbacksAndMessages(null);
         if(null != mVideoView) {
-//            setBookmark(mVideoView.getCurrentPosition(), mVideoView.getDuration());
             mVideoView.suspend();
         }
     }
@@ -250,75 +233,6 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
             mDownloader.stop();
         }
     }
-
-//    private static boolean uriSupportsBookmarks(Uri uri) {
-//        String scheme = uri.getScheme();
-//        String authority = uri.getAuthority();
-//        return ("content".equalsIgnoreCase(scheme) && MediaStore.AUTHORITY.equalsIgnoreCase(authority));
-//    }
-
-//    private Integer getBookmark() {
-//        if (!uriSupportsBookmarks(mUri)) {
-//            return null;
-//        }
-//
-//        String[] projection = new String[] { Video.VideoColumns.DURATION, Video.VideoColumns.BOOKMARK };
-//
-//        try {
-//            Cursor cursor = mContentResolver.query(mUri, projection, null, null, null);
-//            if (cursor != null) {
-//                try {
-//                    if (cursor.moveToFirst()) {
-//                        int duration = getCursorInteger(cursor, 0);
-//                        int bookmark = getCursorInteger(cursor, 1);
-//                        if ((bookmark < HALF_MINUTE) || (duration < TWO_MINUTES)
-//                                || (bookmark > (duration - HALF_MINUTE))) {
-//                            return null;
-//                        }
-//                        return Integer.valueOf(bookmark);
-//                    }
-//                } finally {
-//                    cursor.close();
-//                }
-//            }
-//        } catch (SQLiteException e) {
-//            // ignore
-//        }
-//
-//        return null;
-//    }
-
-    private static int getCursorInteger(Cursor cursor, int index) {
-        try {
-            return cursor.getInt(index);
-        } catch (SQLiteException e) {
-            return 0;
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-
-    }
-
-//    private void setBookmark(int bookmark, int duration) {
-//        if (!uriSupportsBookmarks(mUri)) {
-//            return;
-//        }
-//
-//        ContentValues values = new ContentValues();
-//        values.put(Video.VideoColumns.BOOKMARK, Integer.toString(bookmark));
-//        values.put(Video.VideoColumns.DURATION, Integer.toString(duration));
-//        try {
-//            mContentResolver.updateLog(mUri, values, null, null);
-//        } catch (SecurityException ex) {
-//            // Ignore, can happen if we try to set the bookmark on a read-only
-//            // resource such as a video attached to GMail.
-//        } catch (SQLiteException e) {
-//            // ignore. can happen if the content doesn't support a bookmark
-//            // column.
-//        } catch (UnsupportedOperationException e) {
-//            // ignore. can happen if the external volume is already detached.
-//        }
-//    }
 
     private String formatDuration(final Context context, int durationMs) {
         int duration = durationMs / 1000;

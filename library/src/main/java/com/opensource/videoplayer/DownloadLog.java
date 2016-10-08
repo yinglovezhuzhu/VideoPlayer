@@ -29,6 +29,7 @@ public class DownloadLog {
     private int downloadedSize;
     private int totalSize;
     private String savedFile;
+    private boolean endDownloaded = false; // 文件尾部是否已经下载， false 未下载， true 已下载
     private long finishedTime = System.currentTimeMillis();
     private boolean locked = false;
 
@@ -84,6 +85,14 @@ public class DownloadLog {
         this.savedFile = savedFile;
     }
 
+    public boolean isEndDownloaded() {
+        return endDownloaded;
+    }
+
+    public void setEndDownloaded(boolean endDownloaded) {
+        this.endDownloaded = endDownloaded;
+    }
+
     public long getFinishedTime() {
         return finishedTime;
     }
@@ -112,6 +121,9 @@ public class DownloadLog {
                 ", downloadedSize=" + downloadedSize +
                 ", totalSize=" + totalSize +
                 ", savedFile='" + savedFile + '\'' +
+                ", endDownloaded=" + endDownloaded +
+                ", finishedTime=" + finishedTime +
+                ", locked=" + locked +
                 '}';
     }
 }

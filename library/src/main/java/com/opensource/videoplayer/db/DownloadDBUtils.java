@@ -42,6 +42,7 @@ public class DownloadDBUtils {
     private static final String DOWNLOADED_SIZE = "downloaded_size";
 	private static final String TOTAL_SIZE = "total_size";
     private static final String SAVED_FILE = "saved_file";
+    private static final String END_DOWNLOADED = "end_downloaded";
     private static final String FINISHED_TIME = "finished_time";
 	
 	/**
@@ -63,6 +64,7 @@ public class DownloadDBUtils {
             values.put(DOWNLOADED_SIZE, log.getDownloadedSize());
             values.put(TOTAL_SIZE, log.getTotalSize());
             values.put(SAVED_FILE, log.getSavedFile());
+            values.put(END_DOWNLOADED, log.isEndDownloaded() ? 1 : 0);
             id = db.insert(TABLE_NAME_LOG, "", values);
 			// 设置事务执行的标志为成功
 			db.setTransactionSuccessful();
@@ -114,11 +116,13 @@ public class DownloadDBUtils {
 				int downloadedSizeIndex = cursor.getColumnIndex(DOWNLOADED_SIZE);
                 int totalSizeIndex = cursor.getColumnIndexOrThrow(TOTAL_SIZE);
                 int savedFileIndex = cursor.getColumnIndex(SAVED_FILE);
+                int endDownloadedIndex = cursor.getColumnIndex(END_DOWNLOADED);
                 downloadLog.setId(cursor.getLong(idIndex));
                 downloadLog.setUrl(cursor.getString(urlIndex));
                 downloadLog.setDownloadedSize(cursor.getInt(downloadedSizeIndex));
                 downloadLog.setTotalSize(cursor.getInt(totalSizeIndex));
                 downloadLog.setSavedFile(cursor.getString(savedFileIndex));
+                downloadLog.setEndDownloaded(1 == cursor.getInt(endDownloadedIndex));
 			}
 			cursor.close();
 		}
@@ -141,6 +145,7 @@ public class DownloadDBUtils {
 			values.put(DOWNLOADED_SIZE, log.getDownloadedSize());
             values.put(TOTAL_SIZE, log.getTotalSize());
             values.put(SAVED_FILE, log.getSavedFile());
+            values.put(END_DOWNLOADED, log.isEndDownloaded() ? 1 : 0);
 			count = db.update(TABLE_NAME_LOG, values, URL + " = ?", new String[] {log.getUrl(), });
 			db.setTransactionSuccessful();
 		} finally {

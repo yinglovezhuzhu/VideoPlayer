@@ -42,7 +42,7 @@ public class DownloadDBHelper extends SQLiteOpenHelper {
 		
 		//下载进度表
 		db.execSQL("CREATE TABLE IF NOT EXISTS download_log(_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "url TEXT, downloaded_size INTEGER, total_size INTEGER, saved_file TEXT)");
+                "url TEXT, downloaded_size INTEGER, total_size INTEGER, saved_file TEXT, end_downloaded INTEGER)");
 		
 		//下载历史
 		db.execSQL("CREATE TABLE IF NOT EXISTS download_history(_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
