@@ -33,9 +33,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        final Downloader d = new Downloader(MainActivity.this,
-                "http://www.gzevergrandefc.com/UploadFile/photos/2013-06/fbb77294-6041-41ac-befa-37e237bd41f2.jpg",
-                getExternalCacheDir(), null);
 
         findViewById(R.id.btn_local).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -45,7 +42,6 @@ public class MainActivity extends Activity {
                 i.setData(Uri.parse("/storage/sdcard1/DCIM/Camera/Video/VID_20151121_175527.mp4"));
 //                i.setData(Uri.parse("/storage/emulated/0/Android/data/com.opensource.videoplayer.test/cache/FUKESI.mp4"));
                 startActivity(i);
-//                d.stop();
             }
         });
 
@@ -57,22 +53,6 @@ public class MainActivity extends Activity {
 //                i.setData(Uri.parse("http://172.16.10.84/test.mp4"));
                 i.setData(Uri.parse("http://120.24.234.204/static/upload/video/FUKESI.mp4"));
                 startActivity(i);
-//                new Thread(new Runnable() {
-//                    @Override
-//                    public void run() {
-//
-//                        try {
-//                            d.downloadVideo(".jpg", new DownloadListener() {
-//                                @Override
-//                                public void onProgressUpdate(int downloadedSize, int totalSize) {
-//                                    Log.e("AAAAAAAAAAAAAAAAAAAAA", downloadedSize + "<>" + totalSize);
-//                                }
-//                            });
-//                        } catch (Exception e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
-//                }).start();
             }
         });
 
