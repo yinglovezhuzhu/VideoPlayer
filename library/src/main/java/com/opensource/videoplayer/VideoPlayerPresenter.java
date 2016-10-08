@@ -47,7 +47,7 @@ public class VideoPlayerPresenter implements MediaPlayer.OnErrorListener,
     /** 开始缓存的下载长度 **/
     private long mStartCachingSize = 0;
 
-    private PlayListener mPlayListener = null;
+    private VideoPlayListener mPlayListener = null;
 
     private final Handler mHandler = new Handler();
 
@@ -62,7 +62,7 @@ public class VideoPlayerPresenter implements MediaPlayer.OnErrorListener,
     };
 
     public VideoPlayerPresenter(final Context context, IVideoPlayerView view,
-                                Uri videoUri, PlayListener listener) {
+                                Uri videoUri, VideoPlayListener listener) {
         this.mView = view;
         this.mModel = new VideoPlayerModel(context, videoUri.toString(), new DownloadListener() {
             @Override
@@ -93,7 +93,7 @@ public class VideoPlayerPresenter implements MediaPlayer.OnErrorListener,
             @Override
             public void onError(int code, String message) {
                 if(null != mPlayListener) {
-                    mPlayListener.onError(PlayListener.WHAT_DOWNLOAD_ERROR,
+                    mPlayListener.onError(VideoPlayListener.WHAT_DOWNLOAD_ERROR,
                             "Video downloadVideo failed: " + message);
                 }
             }

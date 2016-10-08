@@ -56,7 +56,7 @@ public class VideoPlayerActivity extends Activity implements IVideoPlayerView {
 
         Intent intent = getIntent();
 
-        mVideoPlayer = new VideoPlayerPresenter(this, this, intent.getData(), new PlayListener() {
+        mVideoPlayer = new VideoPlayerPresenter(this, this, intent.getData(), new VideoPlayListener() {
             @Override
             public void onCompletion() {
                 if (mFinishOnCompletion) {

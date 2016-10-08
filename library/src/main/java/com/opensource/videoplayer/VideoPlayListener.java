@@ -22,7 +22,7 @@ package com.opensource.videoplayer;
  * 播放监听
  * Created by yinglovezhuzhu@gmail.com on 2016/8/17.
  */
-public interface PlayListener {
+public interface VideoPlayListener {
 
     /** 视频文件下载错误 **/
     int WHAT_DOWNLOAD_ERROR = 1;
