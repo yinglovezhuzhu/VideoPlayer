@@ -129,7 +129,7 @@ public class Downloader {
 
                     mDownloadLog = new DownloadLog(mUrl, 0, fileSize, mSavedFile.getPath());
                     DownloadDBUtils.saveLog(mContext, mDownloadLog);
-                    if (mDownloadLog.getDownloadedSize() == fileSize) {
+                    if (mDownloadLog.getDownloadedSize() >= fileSize) {
                         // 下载完成，删除日志，保存到下载历史中
                         DownloadDBUtils.deleteLog(mContext, mUrl);
                         DownloadDBUtils.saveHistory(mContext, mDownloadLog);
@@ -225,9 +225,10 @@ public class Downloader {
             }
             // Update the range of this thread to database.
             DownloadDBUtils.updateLog(mContext, mDownloadLog);
-            if (mDownloadLog.getDownloadedSize() == mDownloadLog.getTotalSize()) {
+            if (mDownloadLog.getDownloadedSize() >= mDownloadLog.getTotalSize()) {
                 // 下载完成，删除日志，保存到下载历史中
                 DownloadDBUtils.deleteLog(mContext, mUrl);
+                mDownloadLog.setDownloadedSize(mDownloadLog.getTotalSize());
                 DownloadDBUtils.saveHistory(mContext, mDownloadLog);
                 mStop = true;
             }
