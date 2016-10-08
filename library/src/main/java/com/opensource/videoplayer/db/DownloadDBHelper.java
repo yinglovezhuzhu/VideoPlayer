@@ -30,7 +30,7 @@ import android.database.sqlite.SQLiteOpenHelper;
  */
 public class DownloadDBHelper extends SQLiteOpenHelper {
 	
-	private static final String DB_NAME = "download.db";
+	private static final String DB_NAME = "downloadVideo.db";
 	
 	private static final int DB_VERSION = 1;
 	

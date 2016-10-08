@@ -27,7 +27,6 @@ import android.provider.MediaStore;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.MediaController;
 import android.widget.VideoView;
 
 /**
@@ -38,7 +37,7 @@ public class VideoActivity extends Activity implements IVideoPlayerView {
     private VideoView mVideoView;
     private View mProgressView;
 
-    private VideoPlayer mVideoPlayer;
+    private VideoPlayerPresenter mVideoPlayer;
     private boolean mFinishOnCompletion;
 
     @Override
@@ -51,11 +50,11 @@ public class VideoActivity extends Activity implements IVideoPlayerView {
 
         // make the video view handle keys for seeking and pausing
         mVideoView.requestFocus();
+        mVideoView.setKeepScreenOn(true);
 
         Intent intent = getIntent();
 
-        mVideoPlayer = new VideoPlayer(this, this, intent.getData());
-        mVideoPlayer.setPlayListener(new PlayListener() {
+        mVideoPlayer = new VideoPlayerPresenter(this, this, intent.getData(), new PlayListener() {
             @Override
             public void onCompletion() {
                 if (mFinishOnCompletion) {

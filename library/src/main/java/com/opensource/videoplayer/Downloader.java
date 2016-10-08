@@ -56,8 +56,8 @@ public class Downloader {
     private File mSaveFolder;
 	private String mFileName; // saveLog file name;
     private File mSavedFile = null;
-	private DownloadLog mDownloadLog; // The data download state
-	private String mUrl; // The url of the file which to download.
+	private DownloadLog mDownloadLog; // The data downloadVideo state
+	private String mUrl; // The url of the file which to downloadVideo.
 
 	/**
 	 * Constructor<br><br>
@@ -78,7 +78,7 @@ public class Downloader {
 	/**
 	 * Download file，this method has network, don't use it on ui thread.
 	 *
-	 * @param listener The listener to listen download state, can be null if not need.
+	 * @param listener The listener to listen downloadVideo state, can be null if not need.
      * @param defaultSuffix 默认后缀，没有设置文件名的时候生效，带点，例如".mp4"
 	 * @return The size that downloaded.
 	 * @throws Exception The error happened when downloading.
@@ -98,7 +98,7 @@ public class Downloader {
             DownloadDBUtils.saveHistory(mContext, mDownloadLog);
             mDownloadLog.unlock();
             mStop = true;
-            Log.w(TAG, "File download finished!");
+            Log.w(TAG, "File downloadVideo finished!");
             return mSavedFile;
         }
 
@@ -161,7 +161,7 @@ public class Downloader {
             try {
                 randomFile = new RandomAccessFile(mSavedFile, "rw");
                 if (fileSize > 0) {
-                    randomFile.setLength(fileSize); // Set total size of the download file.
+                    randomFile.setLength(fileSize); // Set total size of the downloadVideo file.
                 }
             } catch (Exception e) {
                 if(null != mDownloadLog) {
@@ -196,10 +196,10 @@ public class Downloader {
         try {
             conn = getConnection(mUrl);
 
-            // Get the position of this thread start to download.
+            // Get the position of this thread start to downloadVideo.
             int startPos = mDownloadLog.getDownloadedSize();
 
-            // Get the position of this thread end to download.
+            // Get the position of this thread end to downloadVideo.
             int endPos = mDownloadLog.getTotalSize();
 
             //Setting the rage of the data, it will return exact realistic size automatically,
@@ -207,15 +207,15 @@ public class Downloader {
             conn.setRequestProperty("Range", "bytes=" + startPos + "-" + endPos);
 
             // Get the input stream of the connection.
-            Log.i(TAG, "Starts to download from position " + startPos);
+            Log.i(TAG, "Starts to downloadVideo from position " + startPos);
             randomFile = new RandomAccessFile(mSavedFile, "rw");
-            // Make the pointer point to the position where start to download.
+            // Make the pointer point to the position where start to downloadVideo.
             randomFile.seek(startPos);
             inStream = conn.getInputStream();
             // Set local cache size
             byte[] buffer = new byte[BUFFER_SIZE];
             int offset = 0;
-            // The data is written to file until user stop download or data is finished download.
+            // The data is written to file until user stop downloadVideo or data is finished downloadVideo.
             while (!mStop && (offset = inStream.read(buffer)) != -1) {
                 randomFile.write(buffer, 0, offset);
                 mDownloadLog.setDownloadedSize(mDownloadLog.getDownloadedSize() + offset);
@@ -225,6 +225,12 @@ public class Downloader {
             }
             // Update the range of this thread to database.
             DownloadDBUtils.updateLog(mContext, mDownloadLog);
+            if (mDownloadLog.getDownloadedSize() == mDownloadLog.getTotalSize()) {
+                // 下载完成，删除日志，保存到下载历史中
+                DownloadDBUtils.deleteLog(mContext, mUrl);
+                DownloadDBUtils.saveHistory(mContext, mDownloadLog);
+                mStop = true;
+            }
 
             if(null != mDownloadLog) {
                 mDownloadLog.unlock();
@@ -234,7 +240,7 @@ public class Downloader {
                 mDownloadLog.unlock();
             }
             Log.e(TAG, e.toString());// 打印错误
-            throw new RuntimeException("Failed to download file from " + mUrl, e);
+            throw new RuntimeException("Failed to downloadVideo file from " + mUrl, e);
         } finally {
             if(null != randomFile) {
                 try {
@@ -259,7 +265,7 @@ public class Downloader {
 	}
 
 	/**
-	 * Stop the download
+	 * Stop the downloadVideo
 	 */
 	public synchronized void stop() {
 		this.mStop = true;
@@ -269,7 +275,7 @@ public class Downloader {
 	}
 
 	/**
-	 * Get download state is stopped or not.
+	 * Get downloadVideo state is stopped or not.
 	 * @return
 	 */
 	public synchronized boolean isStop() {
@@ -324,15 +330,15 @@ public class Downloader {
             conn.setRequestProperty("Range", "bytes=" + startPos + "-" + endPos);
 
             // Get the input stream of the connection.
-            Log.i(TAG, "Starts to download from position " + startPos);
+            Log.i(TAG, "Starts to downloadVideo from position " + startPos);
             outFile = new RandomAccessFile(mSavedFile, "rw");
-            // Make the pointer point to the position where start to download.
+            // Make the pointer point to the position where start to downloadVideo.
             outFile.seek(startPos);
             inStream = conn.getInputStream();
             // Set local cache size
             byte[] buffer = new byte[BUFFER_SIZE];
             int offset = 0;
-            // The data is written to file until user stop download or data is finished download.
+            // The data is written to file until user stop downloadVideo or data is finished downloadVideo.
             while (!mStop && (offset = inStream.read(buffer)) != -1) {
                 outFile.write(buffer, 0, offset);
             }
@@ -340,7 +346,7 @@ public class Downloader {
         } catch (Exception e) {
             Log.e(TAG, e.toString());// 打印错误
             mDownloadLog.unlock();
-            throw new RuntimeException("Failed to download file from " + mUrl, e);
+            throw new RuntimeException("Failed to downloadVideo file from " + mUrl, e);
         } finally {
             if(null != outFile) {
                 try {
@@ -388,7 +394,7 @@ public class Downloader {
 	}
 	
 	/**
-	 * Check the download folder, make new folder if it is not exist.
+	 * Check the downloadVideo folder, make new folder if it is not exist.
 	 * @param folder 目录
 	 */
 	private void checkDownloadFolder(File folder) {

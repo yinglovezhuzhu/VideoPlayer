@@ -64,7 +64,7 @@ public class MainActivity extends Activity {
 //                    public void run() {
 //
 //                        try {
-//                            d.download(".jpg", new DownloadListener() {
+//                            d.downloadVideo(".jpg", new DownloadListener() {
 //                                @Override
 //                                public void onProgressUpdate(int downloadedSize, int totalSize) {
 //                                    Log.e("AAAAAAAAAAAAAAAAAAAAA", downloadedSize + "<>" + totalSize);

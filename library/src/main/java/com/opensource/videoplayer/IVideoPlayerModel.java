@@ -29,5 +29,20 @@ import java.io.File;
 
 public interface IVideoPlayerModel {
 
-    void download(Context context, String downloadUrl);
+    /**
+     * 下载视频文件
+     */
+    void downloadVideo();
+
+    /**
+     * 获取本地缓存的视频文件地址
+     * @return 本地缓存的视频文件地址，没有初始化或者没有下载的情况下返回null
+     */
+    File getSavedVideoFile();
+
+    void onPause();
+
+    void onResume();
+
+    void onDestroy();
 }

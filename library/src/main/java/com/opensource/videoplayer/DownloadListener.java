@@ -19,16 +19,25 @@
 package com.opensource.videoplayer;
 
 /**
- * Usage The listener to listen download state.
+ * Usage The listener to listen downloadVideo state.
  * @author yinglovezhuzhu@gmail.com
  *
  */
 public interface DownloadListener {
+
+    int CODE_EXCEPTION = -100;
 	
 	/**
-	 * The callback to listen download size
+	 * The callback to listen downloadVideo size
 	 * @param downloadedSize  downloaded size.
 	 * @param totalSize total size of downloading file.
 	 */
-	public void onProgressUpdate(int downloadedSize, int totalSize);
+	void onProgressUpdate(int downloadedSize, int totalSize);
+
+    /**
+     * 下载错误
+     * @param code 错误码
+     * @param message 说明文字
+     */
+	void onError(int code, String message);
 }

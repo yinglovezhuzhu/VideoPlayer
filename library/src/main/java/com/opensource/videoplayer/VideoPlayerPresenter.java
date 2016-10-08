@@ -22,30 +22,21 @@ import android.content.Context;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
-import android.view.View;
-import android.widget.MediaController;
-import android.widget.VideoView;
 
 import com.opensource.videoplayer.db.DownloadDBUtils;
 
 import java.io.File;
 
 
-public class VideoPlayer implements MediaPlayer.OnErrorListener,
-        MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener, Handler.Callback {
-
-    /** 消息：下载错误 **/
-    private static final int MSG_DOWNLOAD_ERROR = 0x01;
-    /** 消息：缓存完毕 **/
-    private static final int MSG_CACHE_READY = 0x02;
-    /** 消息：获取到播放文件URI **/
-    private static final int MSG_GET_URI = 0x03;
+public class VideoPlayerPresenter implements MediaPlayer.OnErrorListener,
+        MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener {
 
     private static final int CACHE_MIN_SIZE = 1024 * 1024;
 
     private IVideoPlayerView mView;
+    private IVideoPlayerModel mModel;
+
     private Uri mUri;
     /** 当前播放进度 **/
     private int mCurrentPosition = 0;
@@ -56,11 +47,9 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
     /** 开始缓存的下载长度 **/
     private long mStartCachingSize = 0;
 
-    private Downloader mDownloader;
-
     private PlayListener mPlayListener = null;
 
-    private final Handler mHandler = new Handler(this);
+    private final Handler mHandler = new Handler();
 
     private final Runnable mPlayingChecker = new Runnable() {
         public void run() {
@@ -72,8 +61,44 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
         }
     };
 
-    public VideoPlayer(final Context context, IVideoPlayerView view, Uri videoUri) {
+    public VideoPlayerPresenter(final Context context, IVideoPlayerView view,
+                                Uri videoUri, PlayListener listener) {
         this.mView = view;
+        this.mModel = new VideoPlayerModel(context, videoUri.toString(), new DownloadListener() {
+            @Override
+            public void onProgressUpdate(int downloadedSize, int totalSize) {
+                Log.e("VideoPlayerPresenter", downloadedSize + " / " + totalSize);
+                if(mOnError) {
+                    if(!mCaching) {
+                        mStartCachingSize = downloadedSize;
+                        mCaching = true;
+                    }
+                    if(downloadedSize - mStartCachingSize > CACHE_MIN_SIZE) {
+                        if(null == mUri) {
+                            mUri = Uri.fromFile(mModel.getSavedVideoFile());
+                        }
+                        mCaching = false;
+                        mOnError = false;
+                        mView.playVideo(mUri, mCurrentPosition);
+                        mView.hideLoadingProgress();
+                    }
+                } else {
+                    if(null == mUri) {
+                        mUri = Uri.fromFile(mModel.getSavedVideoFile());
+                        mView.playVideo(mUri, 0);
+                    }
+                }
+            }
+
+            @Override
+            public void onError(int code, String message) {
+                if(null != mPlayListener) {
+                    mPlayListener.onError(PlayListener.WHAT_DOWNLOAD_ERROR,
+                            "Video downloadVideo failed: " + message);
+                }
+            }
+        });
+        this.mPlayListener = listener;
 
         // For streams that we expect to be slow to start up, show a
         // progress spinner until playback starts.
@@ -103,41 +128,8 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
                         DownloadDBUtils.deleteLog(context, url);
                     }
                 }
-                mDownloader = new Downloader(context, videoUri.toString(), new File(context.getExternalCacheDir(), "Video"), null);
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            mDownloader.download(".mp4", new DownloadListener() {
-                                @Override
-                                public void onProgressUpdate(int downloadedSize, int totalSize) {
-                                    Log.e("VideoPlayer", downloadedSize + " / " + totalSize);
-                                    if(mOnError) {
-                                        if(!mCaching) {
-                                            mStartCachingSize = downloadedSize;
-                                            mCaching = true;
-                                        }
-                                        if(downloadedSize - mStartCachingSize > CACHE_MIN_SIZE) {
-                                            if(null == mUri) {
-                                                mUri = Uri.fromFile(mDownloader.getSavedFile());
-                                            }
-                                            mCaching = false;
-                                            mOnError = false;
-                                            mHandler.sendMessage(mHandler.obtainMessage(MSG_CACHE_READY, mUri));
-                                        }
-                                    } else {
-                                        if(null == mUri) {
-                                            mUri = Uri.fromFile(mDownloader.getSavedFile());
-                                            mHandler.sendMessage(mHandler.obtainMessage(MSG_GET_URI, mUri));
-                                        }
-                                    }
-                                }
-                            });
-                        } catch (Exception e) {
-                            mHandler.sendMessage(mHandler.obtainMessage(MSG_DOWNLOAD_ERROR, e));
-                        }
-                    }
-                }).start();
+
+                mModel.downloadVideo();
             }
 
         } else {
@@ -169,48 +161,17 @@ public class VideoPlayer implements MediaPlayer.OnErrorListener,
 
     }
 
-    @Override
-    public boolean handleMessage(Message msg) {
-        switch (msg.what) {
-            case MSG_DOWNLOAD_ERROR:
-                if(null != mPlayListener) {
-                    mPlayListener.onError(PlayListener.WHAT_DOWNLOAD_ERROR,
-                            "Video download failed: " + (null == msg.obj ? "" : ((Exception) msg.obj).getMessage()));
-                }
-                return true;
-            case MSG_CACHE_READY:
-                mView.playVideo(mUri, mCurrentPosition);
-                mView.hideLoadingProgress();
-                return true;
-            case MSG_GET_URI:
-                mView.playVideo(mUri, 0);
-                return true;
-            default:
-                break;
-        }
-        return false;
-    }
-
-    /**
-     * 设置播放监听
-     * @param listener
-     */
-    public void setPlayListener(PlayListener listener) {
-        this.mPlayListener = listener;
-    }
-
     public void onPause() {
         mHandler.removeCallbacksAndMessages(null);
-
+        mModel.onPause();
     }
 
     public void onResume() {
+        mModel.onResume();
     }
 
     public void onDestroy() {
-        if(null != mDownloader) {
-            mDownloader.stop();
-        }
+        mModel.onDestroy();
     }
 
     private String formatDuration(final Context context, int durationMs) {
