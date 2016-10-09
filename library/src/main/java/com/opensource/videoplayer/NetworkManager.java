@@ -137,7 +137,7 @@ public final class NetworkManager {
             mCurrentNetwork = mConnectivityManager.getActiveNetworkInfo();
             mNetworkConnected = null != mCurrentNetwork && mCurrentNetwork.isConnected();
 
-            mNetworkObservable.notifyNetworkChaged(mNetworkConnected, mCurrentNetwork, lastNetwork);
+            mNetworkObservable.notifyNetworkChanged(mNetworkConnected, mCurrentNetwork, lastNetwork);
         }
     }
 

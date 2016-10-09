@@ -120,11 +120,26 @@ public class VideoPlayerActivity extends Activity implements IVideoPlayerView {
     }
 
     @Override
-    public void setOnErrorListener(MediaPlayer.OnErrorListener errorListener) {
+    public void setOnErrorListener(MediaPlayer.OnErrorListener listener) {
         if(null != mVideoView) {
-            mVideoView.setOnErrorListener(errorListener);
+            mVideoView.setOnErrorListener(listener);
         }
     }
+
+    @Override
+    public void setOnCompletionListener(MediaPlayer.OnCompletionListener listener) {
+        if(null != mVideoView) {
+            mVideoView.setOnCompletionListener(listener);
+        }
+    }
+
+    @Override
+    public void setOnPreparedListener(MediaPlayer.OnPreparedListener listener) {
+        if(null != mVideoView) {
+            mVideoView.setOnPreparedListener(listener);
+        }
+    }
+
 
     @Override
     public void playVideo(Uri uri, int position) {

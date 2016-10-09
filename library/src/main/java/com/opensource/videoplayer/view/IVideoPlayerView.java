@@ -27,7 +27,11 @@ import android.net.Uri;
 
 public interface IVideoPlayerView {
 
-    void setOnErrorListener(MediaPlayer.OnErrorListener errorListener);
+    void setOnErrorListener(MediaPlayer.OnErrorListener listener);
+
+    void setOnCompletionListener(MediaPlayer.OnCompletionListener listener);
+
+    void setOnPreparedListener(MediaPlayer.OnPreparedListener listener);
 
     void playVideo(Uri uri, int position);
 
