@@ -16,35 +16,23 @@
  *  limitations under the License.
  */
 
-package com.opensource.videoplayer.model;
+package com.opensource.videoplayer.observer;
 
-import java.io.File;
+import android.net.NetworkInfo;
 
 /**
- * 下载Model接口
- * Created by yinglovezhuzhu@gmail.com on 2016/10/8.
+ * 网络状态被观察者
+ * Created by yinglovezhuzhu@gmail.com on 2015/6/11.
  */
+public class NetworkObservable extends Observable<NetworkObserver> {
 
-public interface IVideoPlayerModel {
-
-    /**
-     * 下载视频文件
-     */
-    void downloadVideo();
-
-    /**
-     * 获取本地缓存的视频文件地址
-     * @return 本地缓存的视频文件地址，没有初始化或者没有下载的情况下返回null
-     */
-    File getSavedVideoFile();
-
-    void onCreate();
-
-    void onPause();
-
-    void onResume();
-
-    void onDestroy();
-
-    boolean isDownloadStopped();
+    public void notifyNetworkChaged(boolean networkConnected, NetworkInfo currentNetwok,
+                                    NetworkInfo lastNetwork) {
+        synchronized (mObservers) {
+            for(int i = mObservers.size() - 1; i >= 0; i--) {
+                NetworkObserver observer = mObservers.get(i);
+                observer.onNetworkStateChanged(networkConnected, currentNetwok, lastNetwork);
+            }
+        }
+    }
 }

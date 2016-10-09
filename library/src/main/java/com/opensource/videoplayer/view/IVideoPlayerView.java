@@ -18,6 +18,7 @@
 
 package com.opensource.videoplayer.view;
 
+import android.media.MediaPlayer;
 import android.net.Uri;
 
 /** 视频播放器View接口
@@ -25,6 +26,8 @@ import android.net.Uri;
  */
 
 public interface IVideoPlayerView {
+
+    void setOnErrorListener(MediaPlayer.OnErrorListener errorListener);
 
     void playVideo(Uri uri, int position);
 

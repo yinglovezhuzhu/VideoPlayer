@@ -107,6 +107,8 @@ public class VideoPlayerPresenter implements MediaPlayer.OnErrorListener,
         });
         this.mPlayListener = listener;
 
+        mView.setOnErrorListener(this);
+
         // For streams that we expect to be slow to start up, show a
         // progress spinner until playback starts.
         String scheme = videoUri.getScheme();
@@ -153,6 +155,9 @@ public class VideoPlayerPresenter implements MediaPlayer.OnErrorListener,
         mView.showLoadingProgress();
         mCurrentPosition = mp.getCurrentPosition();
         mOnError = true;
+        if(mModel.isDownloadStopped()) {
+            mModel.downloadVideo();
+        }
         return true;
     }
 
@@ -166,6 +171,10 @@ public class VideoPlayerPresenter implements MediaPlayer.OnErrorListener,
     @Override
     public void onPrepared(MediaPlayer mp) {
 
+    }
+
+    public void onCreate() {
+        mModel.onCreate();
     }
 
     public void onPause() {

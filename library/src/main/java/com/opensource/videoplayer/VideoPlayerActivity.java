@@ -21,6 +21,8 @@ package com.opensource.videoplayer;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.media.MediaPlayer;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -30,6 +32,7 @@ import android.view.WindowManager;
 import android.widget.MediaController;
 import android.widget.VideoView;
 
+import com.opensource.videoplayer.observer.NetworkObserver;
 import com.opensource.videoplayer.presenter.VideoPlayerPresenter;
 import com.opensource.videoplayer.view.IVideoPlayerView;
 
@@ -72,6 +75,7 @@ public class VideoPlayerActivity extends Activity implements IVideoPlayerView {
 
             }
         });
+        mVideoPlayer.onCreate();
 
         if (intent.hasExtra(MediaStore.EXTRA_SCREEN_ORIENTATION)) {
             int orientation = intent.getIntExtra(MediaStore.EXTRA_SCREEN_ORIENTATION, ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
@@ -113,6 +117,13 @@ public class VideoPlayerActivity extends Activity implements IVideoPlayerView {
             mVideoView.stopPlayback();
         }
     	super.onDestroy();
+    }
+
+    @Override
+    public void setOnErrorListener(MediaPlayer.OnErrorListener errorListener) {
+        if(null != mVideoView) {
+            mVideoView.setOnErrorListener(errorListener);
+        }
     }
 
     @Override
