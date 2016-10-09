@@ -18,8 +18,6 @@
 
 package com.opensource.videoplayer;
 
-import android.content.Context;
-
 import java.io.File;
 
 /**
