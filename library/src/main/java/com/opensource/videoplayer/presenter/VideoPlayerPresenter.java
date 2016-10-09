@@ -107,7 +107,9 @@ public class VideoPlayerPresenter implements MediaPlayer.OnErrorListener,
         });
         this.mPlayListener = listener;
 
+        mView.setOnPreparedListener(this);
         mView.setOnErrorListener(this);
+        mView.setOnCompletionListener(this);
 
         // For streams that we expect to be slow to start up, show a
         // progress spinner until playback starts.
