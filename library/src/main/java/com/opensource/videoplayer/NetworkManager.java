@@ -92,6 +92,17 @@ public final class NetworkManager {
     }
 
     /**
+     * 重新初始化网络状态，因为在android 7.0 API 24的时候程序关闭后（单例依旧存在），程序无法接收网络状态广播
+     */
+    public void updateNetworkState() {
+        if(!mInitialized) {
+            return;
+        }
+        mCurrentNetwork = mConnectivityManager.getActiveNetworkInfo();
+        mNetworkConnected = null != mCurrentNetwork && mCurrentNetwork.isConnected();
+    }
+
+    /**
      * 注册一个网络状态观察者
      * @param observer
      */
