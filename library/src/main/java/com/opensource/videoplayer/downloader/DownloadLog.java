@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package com.opensource.videoplayer;
+package com.opensource.videoplayer.downloader;
 
 /**
  * 下载日志数据实体类

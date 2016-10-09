@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package com.opensource.videoplayer;
+package com.opensource.videoplayer.downloader;
 
 import android.content.Context;
 import android.util.Log;

@@ -16,28 +16,31 @@
  *  limitations under the License.
  */
 
-package com.opensource.videoplayer;
+package com.opensource.videoplayer.model;
+
+import java.io.File;
 
 /**
- * Usage The listener to listen downloadVideo state.
- * @author yinglovezhuzhu@gmail.com
- *
+ * 下载Model接口
+ * Created by yinglovezhuzhu@gmail.com on 2016/10/8.
  */
-public interface DownloadListener {
 
-    int CODE_EXCEPTION = -100;
-	
-	/**
-	 * The callback to listen downloadVideo size
-	 * @param downloadedSize  downloaded size.
-	 * @param totalSize total size of downloading file.
-	 */
-	void onProgressUpdate(int downloadedSize, int totalSize);
+public interface IVideoPlayerModel {
 
     /**
-     * 下载错误
-     * @param code 错误码
-     * @param message 说明文字
+     * 下载视频文件
      */
-	void onError(int code, String message);
+    void downloadVideo();
+
+    /**
+     * 获取本地缓存的视频文件地址
+     * @return 本地缓存的视频文件地址，没有初始化或者没有下载的情况下返回null
+     */
+    File getSavedVideoFile();
+
+    void onPause();
+
+    void onResume();
+
+    void onDestroy();
 }

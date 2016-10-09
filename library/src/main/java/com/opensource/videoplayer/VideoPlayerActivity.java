@@ -30,6 +30,9 @@ import android.view.WindowManager;
 import android.widget.MediaController;
 import android.widget.VideoView;
 
+import com.opensource.videoplayer.presenter.VideoPlayerPresenter;
+import com.opensource.videoplayer.view.IVideoPlayerView;
+
 /**
  * This activity plays a video from a specified URI.
  */

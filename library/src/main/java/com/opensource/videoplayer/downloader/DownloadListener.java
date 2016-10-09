@@ -16,21 +16,28 @@
  *  limitations under the License.
  */
 
-package com.opensource.videoplayer;
+package com.opensource.videoplayer.downloader;
 
-import android.net.Uri;
-
-/** 视频播放器View接口
- * Created by yinglovezhuzhu@gmail.com on 2016/10/8.
+/**
+ * Usage The listener to listen downloadVideo state.
+ * @author yinglovezhuzhu@gmail.com
+ *
  */
+public interface DownloadListener {
 
-public interface IVideoPlayerView {
+    int CODE_EXCEPTION = -100;
+	
+	/**
+	 * The callback to listen downloadVideo size
+	 * @param downloadedSize  downloaded size.
+	 * @param totalSize total size of downloading file.
+	 */
+	void onProgressUpdate(int downloadedSize, int totalSize);
 
-    void playVideo(Uri uri, int position);
-
-    boolean isPlaying();
-
-    void showLoadingProgress();
-
-    void hideLoadingProgress();
+    /**
+     * 下载错误
+     * @param code 错误码
+     * @param message 说明文字
+     */
+	void onError(int code, String message);
 }

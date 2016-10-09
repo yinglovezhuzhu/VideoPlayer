@@ -16,31 +16,21 @@
  *  limitations under the License.
  */
 
-package com.opensource.videoplayer;
+package com.opensource.videoplayer.view;
 
-import java.io.File;
+import android.net.Uri;
 
-/**
- * 下载Model接口
+/** 视频播放器View接口
  * Created by yinglovezhuzhu@gmail.com on 2016/10/8.
  */
 
-public interface IVideoPlayerModel {
+public interface IVideoPlayerView {
 
-    /**
-     * 下载视频文件
-     */
-    void downloadVideo();
+    void playVideo(Uri uri, int position);
 
-    /**
-     * 获取本地缓存的视频文件地址
-     * @return 本地缓存的视频文件地址，没有初始化或者没有下载的情况下返回null
-     */
-    File getSavedVideoFile();
+    boolean isPlaying();
 
-    void onPause();
+    void showLoadingProgress();
 
-    void onResume();
-
-    void onDestroy();
+    void hideLoadingProgress();
 }

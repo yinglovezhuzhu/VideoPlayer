@@ -23,7 +23,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import com.opensource.videoplayer.DownloadLog;
+import com.opensource.videoplayer.downloader.DownloadLog;
 import com.opensource.videoplayer.utils.StringUtils;
 
 

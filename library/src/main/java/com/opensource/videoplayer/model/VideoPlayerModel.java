@@ -16,12 +16,14 @@
  *  limitations under the License.
  */
 
-package com.opensource.videoplayer;
+package com.opensource.videoplayer.model;
 
 import android.content.Context;
-import android.net.Uri;
 import android.os.Handler;
 
+import com.opensource.videoplayer.downloader.DownloadListener;
+import com.opensource.videoplayer.downloader.DownloadLog;
+import com.opensource.videoplayer.downloader.Downloader;
 import com.opensource.videoplayer.db.DownloadDBUtils;
 
 import java.io.File;
