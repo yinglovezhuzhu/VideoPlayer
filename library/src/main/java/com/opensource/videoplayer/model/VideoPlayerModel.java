@@ -20,6 +20,7 @@ package com.opensource.videoplayer.model;
 
 import android.content.Context;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Handler;
 
 import com.opensource.videoplayer.NetworkManager;
@@ -28,6 +29,7 @@ import com.opensource.videoplayer.downloader.DownloadLog;
 import com.opensource.videoplayer.downloader.Downloader;
 import com.opensource.videoplayer.db.DownloadDBUtils;
 import com.opensource.videoplayer.observer.NetworkObserver;
+import com.opensource.videoplayer.utils.StringUtils;
 
 import java.io.File;
 
@@ -53,16 +55,28 @@ public class VideoPlayerModel implements IVideoPlayerModel {
         }
     };
 
-    public VideoPlayerModel(Context context, String downloadUrl, DownloadListener listener) {
+    public VideoPlayerModel(Context context, Uri videoUri, DownloadListener listener) {
         this.mContext = context;
-        this.mUrl = downloadUrl;
-        mDownloader = new Downloader(context, mUrl,
+        this.mUrl = null == videoUri ? "" : videoUri.toString();
+        mDownloader = new Downloader(context, mUrl, true,
                 new File(context.getExternalCacheDir(), "Video"), null);
         this.mDownloadListener = listener;
     }
 
     @Override
+    public void setVideoUri(Uri videoUri) {
+        this.mUrl = null == videoUri ? "" : videoUri.toString();
+        mDownloader.setUrl(mUrl);
+    }
+
+    @Override
     public void downloadVideo() {
+        if(StringUtils.isEmpty(mUrl)) {
+            if(null != mDownloadListener) {
+                mDownloadListener.onError(DownloadListener.CODE_EXCEPTION, "download url is empty");
+            }
+            return;
+        }
         if(mDownloader.isStop()) {
             DownloadLog history = DownloadDBUtils.getHistoryByUrl(mContext, mUrl);
             if(null != history && (new File(history.getSavedFile())).exists()) {

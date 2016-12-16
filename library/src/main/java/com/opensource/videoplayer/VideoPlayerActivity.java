@@ -19,6 +19,8 @@
 package com.opensource.videoplayer;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.media.MediaPlayer;
@@ -32,6 +34,7 @@ import android.view.WindowManager;
 import android.widget.MediaController;
 import android.widget.VideoView;
 
+import com.opensource.videoplayer.downloader.DownloadListener;
 import com.opensource.videoplayer.observer.NetworkObserver;
 import com.opensource.videoplayer.presenter.VideoPlayerPresenter;
 import com.opensource.videoplayer.view.IVideoPlayerView;
@@ -62,7 +65,7 @@ public class VideoPlayerActivity extends Activity implements IVideoPlayerView {
 
         Intent intent = getIntent();
 
-        mVideoPlayer = new VideoPlayerPresenter(this, this, intent.getData(), new VideoPlayListener() {
+        mVideoPlayer = new VideoPlayerPresenter(this, this, null, new VideoPlayListener() {
             @Override
             public void onCompletion() {
                 if (mFinishOnCompletion) {
@@ -72,10 +75,23 @@ public class VideoPlayerActivity extends Activity implements IVideoPlayerView {
 
             @Override
             public void onError(int what, String msg) {
-
+                // FIXME 视频播放异常处理
+                new AlertDialog.Builder(VideoPlayerActivity.this)
+                        .setTitle("Error")
+                        .setMessage("Video play error")
+                        .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                finish();
+                            }
+                        })
+                        .show();
+                hideLoadingProgress();
             }
         });
         mVideoPlayer.onCreate();
+        mVideoPlayer.setVideoUri(intent.getData());
+        mVideoPlayer.play();
 
         if (intent.hasExtra(MediaStore.EXTRA_SCREEN_ORIENTATION)) {
             int orientation = intent.getIntExtra(MediaStore.EXTRA_SCREEN_ORIENTATION, ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);

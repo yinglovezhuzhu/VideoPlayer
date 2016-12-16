@@ -50,7 +50,9 @@ public class MainActivity extends Activity {
             public void onClick(View v) {
                 Intent i = new Intent(MainActivity.this, VideoPlayerActivity.class);
 //                i.setData(Uri.parse("http://172.16.10.84/test.mp4"));
-                i.setData(Uri.parse("http://120.24.234.204/static/upload/video/FUKESI.mp4"));
+//                i.setData(Uri.parse("http://120.24.234.204/static/upload/video/FUKESI.mp4"));
+//                i.setData(Uri.parse("http://120.77.0.141:8080/upload/2016-11-26/c74c0d51-e4e1-4784-af73-076f933ac796.mp4"));
+                i.setData(Uri.parse("http://120.77.0.141:8080/upload/2016-12-13/5c58e375-ed8a-40cd-be64-60af616563ee.mp4"));
                 startActivity(i);
             }
         });

@@ -59,21 +59,33 @@ public class Downloader {
     private DownloadLog mDownloadLog; // The data downloadVideo state
     private String mUrl; // The url of the file which to downloadVideo.
 
+    private boolean mNeedDownloadEnd = false; // Need download file end first
+
     /**
      * Constructor<br><br>
      *
      * @param context     Context对象
      * @param downloadUrl 下载地址
+     * @param needDownloadEnd 是否先下载文件尾部
      * @param saveFolder  保存目录
      * @param fileName    保存文件名称，可以为null，如果为null，将从服务器解析文件名，如果解析失败，则随机生成一个文件名称
      */
-    public Downloader(Context context, String downloadUrl, File saveFolder, String fileName) {
+    public Downloader(Context context, String downloadUrl, boolean needDownloadEnd, File saveFolder, String fileName) {
         this.mContext = context;
         this.mUrl = downloadUrl;
+        this.mNeedDownloadEnd = needDownloadEnd;
         this.mSaveFolder = saveFolder;
         this.mFileName = fileName;
 
         checkDownloadFolder(saveFolder);
+    }
+
+    /**
+     * 设置下载url
+     * @param url 下载url地址
+     */
+    public void setUrl(String url) {
+        this.mUrl = url;
     }
 
     /**
@@ -85,6 +97,12 @@ public class Downloader {
      * @throws Exception The error happened when downloading.
      */
     public File download(String defaultSuffix, DownloadListener listener) throws Exception {
+        if(StringUtils.isEmpty(mUrl)) {
+            if(null != listener) {
+                listener.onError(DownloadListener.CODE_EXCEPTION, "download url is empty");
+            }
+            return mSavedFile;
+        }
         if (null != mDownloadLog && mDownloadLog.isLocked()) {
             Log.e(TAG, "File downloading now. url = " + mUrl);
             return mSavedFile;
@@ -100,6 +118,10 @@ public class Downloader {
             mDownloadLog.unlock();
             mStop = true;
             Log.w(TAG, "File downloadVideo finished!");
+            return mSavedFile;
+        }
+
+        if(mStop) {
             return mSavedFile;
         }
 
@@ -161,6 +183,10 @@ public class Downloader {
                 conn = null;
             }
 
+            if(mStop) {
+                return mSavedFile;
+            }
+
             try {
                 randomFile = new RandomAccessFile(mSavedFile, "rw");
                 if (fileSize > 0) {
@@ -189,8 +215,18 @@ public class Downloader {
             mFileName = mSavedFile.getName();
         }
 
+        if(mStop) {
+            return mSavedFile;
+        }
+
         // 下载视频数据的尾部部分，否则播放器无法解析视频文件
-        downloadFileEnd(mContext, 1024 * 512);
+        if(mNeedDownloadEnd) {
+            downloadFileEnd(mContext, 1024 * 512);
+        }
+
+        if(mStop) {
+            return mSavedFile;
+        }
 
         if (null != listener) {
             listener.onProgressUpdate(mDownloadLog.getDownloadedSize(), mDownloadLog.getTotalSize());

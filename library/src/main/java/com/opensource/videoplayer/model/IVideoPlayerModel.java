@@ -18,6 +18,8 @@
 
 package com.opensource.videoplayer.model;
 
+import android.net.Uri;
+
 import java.io.File;
 
 /**
@@ -26,6 +28,8 @@ import java.io.File;
  */
 
 public interface IVideoPlayerModel {
+
+    void setVideoUri(Uri videoUri);
 
     /**
      * 下载视频文件
